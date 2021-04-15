@@ -43,7 +43,7 @@ def step_impl(context, issuer):
     assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
 
     # if this is ACA-py then there is provision for the holder to check the revocation status of the cred then they can take action,
-    # like delete it from thier wallet. This should be done, since the algorithm that 
+    # like delete it from their wallet. This should be done, since the algorithm that 
     if "delete_cred_from_wallet" in context.tags:
         # Call the revocation status api
         #(resp_status, resp_text) = agent_backchannel_GET(context.prover_url + "/agent/command/", "revocation", operation="credential-record", data=credential_revocation)
@@ -65,22 +65,22 @@ def step_impl(context, prover, presentation):
     context.credential_id_dict[context.schema['schema_name']].reverse()
 
     # Call prover makes the presentation of the proof
-    context.execute_steps('''
-        When "''' + prover + '''" makes the {presentation} of the proof
-    '''.format(presentation=presentation))
+    context.execute_steps(f'''
+        When "{prover}" makes the {presentation} of the proof
+    ''')
 
 @given('{issuer} has revoked the credential after {timeframe}')
 @given('{issuer} has revoked the credential before {timeframe}')
 @given('{issuer} has revoked the credential within {timeframe}')
 def step_impl(context, issuer, timeframe):
-    #keeping this step here just in case there is a reason to use the timframe here instead of just the request for proof.
+    # keeping this step here just in case there is a reason to use the timframe here instead of just the request for proof.
 
     # context.execute_steps(u'''
     #     When "''' + issuer + '''" revokes the credential
     #  ''')
-    context.execute_steps(u'''
+    context.execute_steps(f'''
         When {issuer} revokes the credential
-     '''.format(issuer=issuer))
+     ''')
 
 @when('"{verifier}" sends a {request_for_proof} presentation to "{prover}" with credential validity after {timeframe}')
 @when('"{verifier}" sends a {request_for_proof} presentation to "{prover}" with credential validity before {timeframe}')
@@ -91,7 +91,7 @@ def step_impl(context, verifier, request_for_proof, prover, timeframe):
     sleep(2)
     context.non_revoked_timeframe = create_non_revoke_interval(timeframe)
 
-    context.execute_steps('''
-        When "''' + verifier + '''" sends a ''' + request_for_proof + ''' presentation to "''' + prover + '''"
+    context.execute_steps(f'''
+        When "{verifier}" sends a {request_for_proof} presentation to "{prover}"
     ''')
 

@@ -57,7 +57,7 @@ def get_ledger_url(ledger_url: str = None):
     if not ledger_url:
         ledger_url = LEDGER_URL
     if not ledger_url:
-        ledger_url = f"http://{self.external_host}:9000"
+        ledger_url = f"http://{DEFAULT_EXTERNAL_HOST}:9000"
 
     return ledger_url
 

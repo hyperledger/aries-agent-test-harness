@@ -72,7 +72,7 @@ Feature: RFC 0023 Establishing Connections with DID Exchange
          | Acme | requester |
          | Bob  | responder |
       And "Bob" has a resolvable DID
-      And "Acme" aquires the resolvable DID
+      And "Acme" acquires the resolvable DID
       When "Acme" sends the request to "Bob" with the public DID
       And "Bob" receives the request with their public DID
       When "Bob" sends a response to "Acme"
@@ -87,7 +87,7 @@ Feature: RFC 0023 Establishing Connections with DID Exchange
          | Acme | responder |
          | Bob  | requester |
       And "Acme" has a resolvable DID
-      And "Bob" aquires the resolvable DID
+      And "Bob" acquires the resolvable DID
       When "Bob" sends the request to "Acme" with the public DID
       And "Acme" receives the request with their public DID
       And "Acme" sends a response to "Bob"

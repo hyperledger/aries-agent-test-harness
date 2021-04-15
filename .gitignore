@@ -32,6 +32,9 @@ _site/
 .env
 Gemfile.lock
 
-env
+# ignore python env files
+env/
 .python-version
+
+# VSCode
 .vscode/settings.json

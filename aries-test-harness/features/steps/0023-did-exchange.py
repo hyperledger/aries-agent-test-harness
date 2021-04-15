@@ -1,7 +1,7 @@
 # -----------------------------------------------------------
-# Behave Step Definitions for the DID Excahnge Protocol 0023
+# Behave Step Definitions for the DID Exchange Protocol 0023
 # used to establish connections between Aries Agents based on DIDs.
-# 0023 DID Excahnge RFC: 
+# 0023 DID Exchange RFC: 
 # https://github.com/hyperledger/aries-rfcs/blob/master/features/0023-did-exchange/README.md
 #
 # Current AIP version level of test coverage: N/A
@@ -9,7 +9,7 @@
 #  
 # -----------------------------------------------------------
 
-from behave import given, when, then
+from behave import given, when
 import json, time
 from agent_backchannel_client import agent_backchannel_GET, agent_backchannel_POST, expected_agent_state
 
@@ -30,15 +30,7 @@ def step_impl(context, responder):
     #assert "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/didexchange/v1.0" in resp_text
     context.responder_invitation = resp_json["invitation"]
     # TODO drill into the handshake protocol in the invitation and remove anything else besides didexchange.
-
-    # setup the initial connection id dictionary if one doesn't exist.
-    if not hasattr(context, 'connection_id_dict'):
-        context.connection_id_dict = {}
-
-    # Check for responder key existing in dict
-    if responder not in context.connection_id_dict:
-        context.connection_id_dict[responder] = {}
-    
+        
     # Get the responders's connection id from the above request's response webhook in the backchannel
     invitation_id = context.responder_invitation["@id"]
     (resp_status, resp_text) = agent_backchannel_GET(responder_url + "/agent/response/", "did-exchange", id=invitation_id)
@@ -68,9 +60,9 @@ def step_impl(context, requester):
     #/wallet/set-did-endpoint
 
 
-@given('"{responder}" aquires the resolvable DID')
+@given('"{responder}" acquires the resolvable DID')
 def step_impl(context, responder):
-    # Get the Reponders public did. 
+    # Get the responders public did. 
     context.requester_did = context.requester_public_did['did']
 
 
@@ -98,14 +90,6 @@ def step_impl(context, requester, responder):
     assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
     resp_json = json.loads(resp_text)
 
-    # setup the initial connection id dictionary if one doesn't exist.
-    if not hasattr(context, 'connection_id_dict'):
-        context.connection_id_dict = {}
-
-    # Check for responder key existing in dict
-    if requester not in context.connection_id_dict:
-        context.connection_id_dict[requester] = {}
-
     # Some agents (afgo) do not have a webhook that give a connection id at this point in the protocol. 
     # If it is not here, skip this and check for one later in the process and add it then.
     if "connection_id" in resp_text:
@@ -121,14 +105,6 @@ def step_impl(context, responder):
 
     resp_json = json.loads(resp_text)
     responder_did = resp_json
-
-    # setup the initial connection id dictionary if one doesn't exist.
-    if not hasattr(context, 'connection_id_dict'):
-        context.connection_id_dict = {}
-
-    # Check for responder key existing in dict
-    if responder not in context.connection_id_dict:
-        context.connection_id_dict[responder] = {}
 
     # If it is not here, skip this and check for one later in the process and add it then.
     if "connection_id" in resp_text:
@@ -151,14 +127,6 @@ def step_impl(context, responder):
     #assert "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/didexchange/v1.0" in resp_text
     context.responder_invitation = resp_json["invitation"]
     # TODO drill into the handshake protocol in the invitation and remove anything else besides didexchange.
-
-    # setup the initial connection id dictionary if one doesn't exist.
-    if not hasattr(context, 'connection_id_dict'):
-        context.connection_id_dict = {}
-
-    # Check for responder key existing in dict
-    if responder not in context.connection_id_dict:
-        context.connection_id_dict[responder] = {}
     
     # Get the responders's connection id from the above request's response webhook in the backchannel
     invitation_id = context.responder_invitation["@id"]
@@ -184,14 +152,7 @@ def step_impl(context, requester):
     resp_json = json.loads(resp_text)
     assert resp_json["state"] == "invitation-received"
 
-    if not hasattr(context, 'connection_id_dict'):
-        context.connection_id_dict = {}
-
-    # Check for responder key existing in dict
-    if requester not in context.connection_id_dict:
-        context.connection_id_dict[requester] = {}
-
-    context.connection_id_dict[requester] = {context.responder_name: resp_json["connection_id"]}
+    context.connection_id_dict[requester][context.responder_name] = resp_json["connection_id"]
 
 
 @when('"{requester}" sends the request to "{responder}"')
@@ -242,7 +203,7 @@ def step_impl(context, responder):
 
     responder_connection_id = context.connection_id_dict[responder][context.requester_name]
 
-    # responder already recieved the connection request in the send-request call so get connection and verify status.
+    # responder already received the connection request in the send-request call so get connection and verify status.
     assert expected_agent_state(responder_url, "did-exchange", responder_connection_id, "request-received")
 
 
@@ -285,7 +246,7 @@ def step_impl(context, requester, responder):
     # requester_connection_id = context.connection_id_dict[requester][context.responder_name]
 
     # # get connection and verify status
-    # assert expected_agent_state(requester_url, "connection", requester_connection_id, "response-recieved")
+    # assert expected_agent_state(requester_url, "connection", requester_connection_id, "response-received")
 
     # data = {"comment": "Hello from " + requester}
     # (resp_status, resp_text) = agent_backchannel_POST(requester_url + "/agent/command/", "did-exchange", operation="send-complete", id=requester_connection_id, data=data)

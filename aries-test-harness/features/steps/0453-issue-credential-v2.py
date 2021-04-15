@@ -47,10 +47,7 @@ def step_impl(context, holder, cred_format, issuer, credential_data):
             except FileNotFoundError:
                 print(FileNotFoundError + ': features/data/cred_data_' + schema.lower() + '.json')
 
-            if 'credential_data_dict' in context:
-                context.credential_data_dict[schema] = credential_data_json[credential_data]['attributes']
-            else:
-                context.credential_data_dict = {schema: credential_data_json[credential_data]['attributes']}
+            context.credential_data_dict[schema] = credential_data_json[credential_data]['attributes']
 
             if "AIP20" in context.tags:
                 if 'filters_dict' in context:
@@ -174,30 +171,16 @@ def step_impl(context, issuer, cred_format):
 @when('"{holder}" acknowledges the "{cred_format}" credential issue')
 def step_impl(context, holder, cred_format):
     holder_url = context.config.userdata.get(holder)
-    
-    # a credential id shouldn't be needed with a cred_ex_id being passed
-    # credential_id = {
-    #     "credential_id": context.cred_thread_id,
-    # }
-    credential_id = {
-        "comment": "storing credential"
-    }
 
     sleep(1)
-    (resp_status, resp_text) = agent_backchannel_POST(holder_url + "/agent/command/", "issue-credential-v2", operation="store", id=context.cred_thread_id, data=credential_id)
+    (resp_status, resp_text) = agent_backchannel_POST(holder_url + "/agent/command/", "issue-credential-v2", operation="store", id=context.cred_thread_id)
     assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
     resp_json = json.loads(resp_text)
     assert resp_json["state"] == "done"
 
+    # FIXME: the return value of this is very ACA-Py specific, should just be credential_id
     credential_id = resp_json[cred_format]["credential_id"]
-
-    if 'credential_id_dict' in context:
-        try:
-            context.credential_id_dict[context.schema['schema_name']].append(credential_id)
-        except KeyError:
-            context.credential_id_dict[context.schema['schema_name']] = [credential_id]
-    else:
-        context.credential_id_dict = {context.schema['schema_name']: [credential_id]}
+    context.credential_id_dict[context.schema['schema_name']].append(credential_id)
 
     # Verify issuer status
     # TODO This is returning none instead of Done. Should this be the case. Needs investigation.

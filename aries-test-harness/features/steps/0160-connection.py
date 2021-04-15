@@ -10,7 +10,7 @@
 
 from behave import given, when, then
 import json
-from agent_backchannel_client import agent_backchannel_GET, agent_backchannel_POST, expected_agent_state
+from agent_backchannel_client import agent_backchannel_POST, expected_agent_state
 
 @given('{n} agents')
 @given(u'we have {n} agents')
@@ -89,13 +89,10 @@ def step_impl(context, inviter):
     # if it does, it was probably used to create another connection in a 3+ agent scenario
     # so that means we need to keep the connection ids around for use in the scenario
     # so we will not create a new dict which will reset the dict
-    if hasattr(context, 'temp_connection_id_dict'):
-        context.temp_connection_id_dict[inviter] = resp_json["connection_id"]
-    else:
-        context.temp_connection_id_dict = {inviter: resp_json["connection_id"]}
+    context.temp_connection_id_dict[inviter] = resp_json["connection_id"]
 
     # Check to see if the inviter_name exists in context. If not, antother suite is using it so set the inviter name and url
-    if not hasattr(context, 'inviter_name') or context.inviter_name != inviter:
+    if context.inviter_name != inviter:
         context.inviter_url = inviter_url
         context.inviter_name = inviter
 
@@ -113,20 +110,16 @@ def step_impl(context, invitee):
 
     resp_json = json.loads(resp_text)
 
-    if not hasattr(context, 'connection_id_dict'):
-        context.connection_id_dict = {}
-        context.connection_id_dict[invitee] = {}
-    
     context.connection_id_dict[invitee][context.inviter_name] = resp_json["connection_id"]
 
     # Also add the inviter into the main connection_id_dict. if the len is 0 that means its already been cleared and this may be Mallory.
     if len(context.temp_connection_id_dict) != 0:
-        context.connection_id_dict[context.inviter_name] = {invitee: context.temp_connection_id_dict[context.inviter_name]}
+        context.connection_id_dict[context.inviter_name][invitee] = context.temp_connection_id_dict[context.inviter_name]
         #clear the temp connection id dict used in the initial step. We don't need it anymore.
         context.temp_connection_id_dict.clear()
 
     # Check to see if the invitee_name exists in context. If not, antother suite is using it so set the invitee name and url
-    if not hasattr(context, 'invitee_name'):
+    if not context.invitee_name:
         context.invitee_url = invitee_url
         context.invitee_name = invitee
 
@@ -138,7 +131,6 @@ def step_impl(context, invitee):
 @then('"{inviter}" sends a connection response to "{invitee}"')
 def step_impl(context, inviter, invitee):
     inviter_url = context.config.userdata.get(inviter)
-    #inviter_connection_id = context.connection_id_dict[inviter]
     inviter_connection_id = context.connection_id_dict[inviter][invitee]
     invitee_url = context.config.userdata.get(invitee)
     invitee_connection_id = context.connection_id_dict[invitee][inviter]
@@ -159,7 +151,7 @@ def step_impl(context, invitee):
     invitee_url = context.config.userdata.get(invitee)
     invitee_connection_id = context.connection_id_dict[invitee][context.inviter_name]
 
-    # invitee already recieved the connection response in the accept-request call so get connection and verify status=responded.
+    # invitee already received the connection response in the accept-request call so get connection and verify status=responded.
     assert expected_agent_state(invitee_url, "connection", invitee_connection_id, "responded")
 
 @given('"{invitee}" sends a connection request to "{inviter}"')
@@ -187,7 +179,7 @@ def step_impl(context, inviter):
     inviter_url = context.config.userdata.get(inviter)
     inviter_connection_id = context.connection_id_dict[inviter][context.invitee_name]
 
-    # inviter already recieved the connection request in the accept-invitation call so get connection and verify status=requested.
+    # inviter already received the connection request in the accept-invitation call so get connection and verify status=requested.
     assert expected_agent_state(inviter_url, "connection", inviter_connection_id, "requested", wait_time=60.0)
 
 
@@ -245,8 +237,8 @@ def step_impl(context, inviter, invitee):
     invitee_url = context.config.userdata.get(invitee)
     invitee_connection_id = context.connection_id_dict[invitee][inviter]
 
-    # Check to see if this is a DID Exchange connection to set the state to check appropriatly for that protocol.
-    if "responder_url" in context:
+    # Check to see if this is a DID Exchange connection to set the state to check appropriately for that protocol.
+    if context.responder_url:
         state_to_assert = "completed"
         topic = "did-exchange"
     else:
@@ -275,27 +267,27 @@ def step_impl(context, inviter, invitee):
 @given('"{sender}" and "{receiver}" have an existing connection')
 def step_impl(context, sender, receiver):
     if "DIDExchangeConnection" in context.tags:
-        context.execute_steps(u'''
-            When "''' + sender + '''" sends an explicit invitation
-            And "''' + receiver + '''" receives the invitation
-            And "''' + receiver + '''" sends the request to "''' + sender + '''"
-            And "''' + sender + '''" receives the request
-            And "''' + sender + '''" sends a response to "''' + receiver + '''"
-            And "''' + receiver + '''" receives the response
-            And "''' + receiver + '''" sends complete to "''' + sender + '''"
-            Then "''' + sender + '''" and "''' + receiver + '''" have a connection
+        context.execute_steps(f'''
+           When "{sender}" sends an explicit invitation
+            And "{receiver}" receives the invitation
+            And "{receiver}" sends the request to "{sender}"
+            And "{sender}" receives the request
+            And "{sender}" sends a response to "{receiver}"
+            And "{receiver}" receives the response
+            And "{receiver}" sends complete to "{sender}"
+           Then "{sender}" and "{receiver}" have a connection
         ''')
 
     else:
-        context.execute_steps(u'''
-            When "''' + sender + '''" generates a connection invitation
-            And "''' + receiver + '''" receives the connection invitation
-            And "''' + receiver + '''" sends a connection request to "''' + sender + '''"
-            And "''' + sender + '''" receives the connection request
-            And "''' + sender + '''" sends a connection response to "''' + receiver + '''"
-            And "''' + receiver + '''" receives the connection response
-            And "''' + receiver + '''" sends trustping to "''' + sender + '''"
-            Then "''' + sender + '''" and "''' + receiver + '''" have a connection
+        context.execute_steps(f'''
+           When "{sender}" generates a connection invitation
+            And "{receiver}" receives the connection invitation
+            And "{receiver}" sends a connection request to "{sender}"
+            And "{sender}" receives the connection request
+            And "{sender}" sends a connection response to "{receiver}"
+            And "{receiver}" receives the connection response
+            And "{receiver}" sends trustping to "{sender}"
+           Then "{sender}" and "{receiver}" have a connection
         ''')
 
 @when(u'"{sender}" sends a trust ping')
@@ -321,15 +313,15 @@ def step_impl(context, receiver):
 
 @given('"{invitee}" has sent a connection request to "{inviter}"')
 def step_impl(context, invitee, inviter):
-    context.execute_steps('''
-        When "''' + inviter + '''" generates a connection invitation
-         And "''' + invitee + '''" receives the connection invitation
-         And "''' + invitee + '''" sends a connection request
+    context.execute_steps(f'''
+        When "{inviter}" generates a connection invitation
+         And "{invitee}" receives the connection invitation
+         And "{invitee}" sends a connection request
     ''')
 
 @given('"{inviter}" has accepted the connection request by sending a connection response')
 def step_impl(context, inviter):
-    context.execute_steps('''When "''' + inviter + '''" accepts the connection response''')
+    context.execute_steps(f'''When "{inviter}" accepts the connection response''')
 
 
 @given(u'"{invitee}" is in the state of complete')
@@ -350,8 +342,8 @@ def step_impl(context, inviter):
     assert expected_agent_state(inviter_url, "connection", inviter_connection_id, "responded")
 
 
-@when(u'"{sender}" sends acks to "{reciever}"')
-def step_impl(context, sender, reciever):
+@when(u'"{sender}" sends acks to "{receiver}"')
+def step_impl(context, sender, receiver):
     sender_url = context.config.userdata.get(sender)
     sender_connection_id = context.connection_id_dict[sender][context.inviter_name]
 
@@ -379,37 +371,37 @@ def step_impl(context, inviter):
 
 @given(u'"{inviter}" generated a single-use connection invitation')
 def step_impl(context, inviter):
-    context.execute_steps('''
-        When "''' + inviter + '''" generates a connection invitation
+    context.execute_steps(f'''
+        When "{inviter}" generates a connection invitation
     ''')
 
 
 @given(u'"{invitee}" received the connection invitation')
 def step_impl(context, invitee):
-    context.execute_steps('''
-        When "''' + invitee + '''" receives the connection invitation
+    context.execute_steps(f'''
+        When "{invitee}" receives the connection invitation
     ''')
 
 
 @given(u'"{invitee}" sent a connection request to "{inviter}"')
 def step_impl(context, invitee, inviter):
-    context.execute_steps('''
-        When "''' + invitee + '''" sends a connection request to "''' + inviter + '''"
+    context.execute_steps(f'''
+        When "{invitee}" sends a connection request to "{inviter}"
     ''')
 
 
 @given(u'"{inviter}" and "{invitee}" have a connection')
 def step_impl(context, inviter, invitee):
-    context.execute_steps('''
-        When "''' + invitee + '''" sends trustping to "''' + inviter + '''"
-        Then "''' + inviter + '''" and "''' + invitee + '''" have a connection
+    context.execute_steps(f'''
+        When "{invitee}" sends trustping to "{inviter}"
+        Then "{inviter}" and "{invitee}" have a connection
         ''')
 
 
 @when(u'"{inviteinterceptor}" sends a connection request to "{inviter}" based on the connection invitation')
 def step_impl(context, inviteinterceptor, inviter):
-    context.execute_steps('''
-        When "''' + inviteinterceptor + '''" receives the connection invitation
+    context.execute_steps(f'''
+        When "{inviteinterceptor}" receives the connection invitation
     ''')
     inviteinterceptor_url = context.config.userdata.get(inviteinterceptor)
     inviteinterceptor_connection_id = context.connection_id_dict[inviteinterceptor][inviter]
@@ -440,20 +432,20 @@ def step_impl(context, inviter):
 
 @given(u'"{inviter}" generated a multi-use connection invitation')
 def step_impl(context, inviter):
-    context.execute_steps('''
-        When "''' + inviter + '''" generates a connection invitation
+    context.execute_steps(f'''
+        When "{inviter}" generates a connection invitation
     ''')
 
 
 @when(u'"{sender}" and "{receiver}" complete the connection process')
 def step_impl(context, sender, receiver):
-    context.execute_steps(u'''
-         When "''' + receiver + '''" receives the connection invitation
-         And "''' + receiver + '''" sends a connection request to "''' + sender + '''"
-         And "''' + sender + '''" receives the connection request
-         And "''' + sender + '''" sends a connection response to "''' + receiver + '''"
-         And "''' + receiver + '''" receives the connection response
-         And "''' + receiver + '''" sends trustping to "''' + sender + '''"
+    context.execute_steps(f'''
+         When "{receiver}" receives the connection invitation
+         And "{receiver}" sends a connection request to "{sender}"
+         And "{sender}" receives the connection request
+         And "{sender}" sends a connection response to "{receiver}"
+         And "{receiver}" receives the connection response
+         And "{receiver}" sends trustping to "{sender}"
     ''')
 
 @then('"{inviter}" and "{invitee}" are able to complete the connection')
@@ -463,8 +455,8 @@ def step_impl(context):
 
 @then(u'"{receiver}" and "{sender}" have another connection')
 def step_impl(context, receiver, sender):
-    context.execute_steps(u'''
-        Then "''' + sender + '''" and "''' + receiver + '''" have a connection
+    context.execute_steps(f'''
+        Then "{sender}" and "{receiver}" have a connection
     ''')
 
 
