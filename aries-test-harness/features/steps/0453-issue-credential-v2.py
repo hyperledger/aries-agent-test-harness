@@ -12,7 +12,8 @@ def step_impl(context, issuer: str, cred_format: str = CRED_FORMAT_INDY):
     if cred_format == CRED_FORMAT_INDY:
         # Call legacy indy ready to issue credential step
         context.execute_steps(f'''
-            Given '"{issuer}" is ready to issue a credential'
+            Given "{issuer}" has a public did
+            And "{issuer}" is ready to issue a credential
         ''')
     elif cred_format == CRED_FORMAT_JSON_LD:
         issuer_url = context.config.userdata.get(issuer)
