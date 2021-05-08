@@ -4,9 +4,9 @@
 
 | Runset | ACME<br>(Issuer) | Bob<br>(Holder) | Faber<br>(Verfier) | Mallory<br>(Holder) | Scope | Results | 
 | ------ | :--------------: | :-------------: | :----------------: | :-----------------: | ----- | :-----: | 
-| [acapy-afgo](#runset-acapy-afgo) | acapy-main<br>0.6.0 | afgo-master<br>unknown | acapy-main<br>0.6.0 | acapy-main<br>0.6.0 | pre-AIP 2.0 | [**0 / 5<br>0%**](https://allure.vonx.io/api/allure-docker-service/projects/acapy-b-afgo/reports/latest/index.html?redirect=false#behaviors) |
-| [afgo-acapy](#runset-afgo-acapy) | afgo-master<br>unknown | acapy-main<br>0.6.0 | afgo-master<br>unknown | afgo-master<br>unknown | pre-AIP 2.0 | [**0 / 5<br>0%**](https://allure.vonx.io/api/allure-docker-service/projects/afgo-b-acapy/reports/latest/index.html?redirect=false#behaviors) |
-| [afgo](#runset-afgo) | afgo-master<br>unknown | afgo-master<br>unknown | afgo-master<br>unknown | afgo-master<br>unknown | pre-AIP 2.0 | [**3 / 3<br>100%**](https://allure.vonx.io/api/allure-docker-service/projects/afgo/reports/latest/index.html?redirect=false#behaviors) |
+| [acapy-afgo](#runset-acapy-afgo) | acapy-main<br>0.6.0 | afgo-master<br> | acapy-main<br>0.6.0 | acapy-main<br>0.6.0 | pre-AIP 2.0 | [**0 / 5<br>0%**](https://allure.vonx.io/api/allure-docker-service/projects/acapy-b-afgo/reports/latest/index.html?redirect=false#behaviors) |
+| [afgo-acapy](#runset-afgo-acapy) | afgo-master<br> | acapy-main<br>0.6.0 | afgo-master<br> | afgo-master<br> | pre-AIP 2.0 | [**0 / 5<br>0%**](https://allure.vonx.io/api/allure-docker-service/projects/afgo-b-acapy/reports/latest/index.html?redirect=false#behaviors) |
+| [afgo](#runset-afgo) | afgo-master<br> | afgo-master<br> | afgo-master<br> | afgo-master<br> | pre-AIP 2.0 | [**0 / 3<br>0%**](https://allure.vonx.io/api/allure-docker-service/projects/afgo/reports/latest/index.html?redirect=false#behaviors) |
 
 ## Runset Notes
 
@@ -18,7 +18,7 @@ Runset Name: ACA-PY to AF-Go
 **Latest results: 0 out of 5 (0%)**
 
 
-*Last run: Wed May  5 01:20:51 UTC 2021*
+*Last run: Sat May  8 01:20:51 UTC 2021*
 ```
 
 #### Current Runset Status
@@ -42,7 +42,7 @@ Runset Name: AF-Go to ACA-PY
 **Latest results: 0 out of 5 (0%)**
 
 
-*Last run: Wed May  5 01:50:32 UTC 2021*
+*Last run: Sat May  8 01:52:41 UTC 2021*
 ```
 
 #### Current Runset Status
@@ -63,10 +63,10 @@ One might be in the test suite, while two others appear to be in the Aries Frame
 Runset Name: AF-Go to AF-Go
 
 ```tip
-**Latest results: 3 out of 3 (100%)**
+**Latest results: 0 out of 3 (0%)**
 
 
-*Last run: Wed May  5 01:49:01 UTC 2021*
+*Last run: Fri May  7 01:53:30 UTC 2021*
 ```
 
 #### Current Runset Status
