@@ -79,60 +79,9 @@ namespace DotNet.Backchannel.Controllers
         }
 
         [HttpPost("send-proposal")]
-        public async Task<IActionResult> SendCredentialProposalAsync(OperationBody body)
+        public Task<IActionResult> SendCredentialProposalAsync(OperationBody body)
         {
-            var context = await _agentContextProvider.GetContextAsync();
-            var proposal = body.Data;
-            var connectionId = (string)proposal["connection_id"];
-            var credentialPreview = proposal["credential_proposal"].ToObject<CustomCredentialPreviewMessage>();
-            var credentialDefinitionId = (string)proposal["cred_def_id"];
-            var schemaId = (string)proposal["schema_id"];
-            var connection = await _connectionService.GetAsync(context, connectionId);
-
-            var threadId = Guid.NewGuid().ToString();
-
-            credentialPreview.Attributes = CleanCredentialPreviewAttributes(credentialPreview.Attributes);
-
-            // NOTE: Aries Framework .NET doesn't support v1.1 yet which includes 'schema_issuer_did', 'schema_name', 'schema_version', 'issuer_did'
-            var credentialProposeMessage = new CustomCredentialProposeMessage
-            {
-                Id = threadId,
-                Comment = (string)proposal["comment"] ?? "hello", // ACA-Py requires comment
-                CredentialProposal = credentialPreview,
-                CredentialDefinitionId = credentialDefinitionId,
-                SchemaId = schemaId
-            };
-
-            var credentialRecord = new CredentialRecord
-            {
-                Id = Guid.NewGuid().ToString(),
-                ConnectionId = connectionId,
-                CredentialAttributesValues = credentialPreview.Attributes,
-                CredentialDefinitionId = credentialDefinitionId,
-                SchemaId = schemaId,
-                // State should be proposal-received
-                State = CredentialState.Offered
-            };
-            credentialRecord.SetTag(TagConstants.Role, TagConstants.Holder);
-            credentialRecord.SetTag(TagConstants.LastThreadId, threadId);
-
-            await _recordService.AddAsync(context.Wallet, credentialRecord);
-
-            var THCredentialExchange = new TestHarnessCredentialExchange
-            {
-                RecordId = credentialRecord.Id,
-                ThreadId = threadId,
-                State = TestHarnessCredentialExchangeState.ProposalSent,
-            };
-
-            _credentialCache.Set(THCredentialExchange.ThreadId, THCredentialExchange);
-
-            // Listen for credential offer to update the state
-            UpdateStateOnMessage(THCredentialExchange, TestHarnessCredentialExchangeState.OfferReceived, _ => new[] { MessageTypes.IssueCredentialNames.OfferCredential, MessageTypesHttps.IssueCredentialNames.OfferCredential }.Contains(_.MessageType) && _.ThreadId == THCredentialExchange.ThreadId);
-
-            await _messageService.SendAsync(context, credentialProposeMessage, connection);
-
-            return Ok(THCredentialExchange);
+            throw new NotImplementedException("Send proposal not supported for .NET backchannel");
         }
 
         [HttpPost("send-offer")]
@@ -156,46 +105,7 @@ namespace DotNet.Backchannel.Controllers
             // Send offer in response to proposal
             if (threadId != null)
             {
-                THCredentialExchange = _credentialCache.Get<TestHarnessCredentialExchange>(threadId);
-
-                credentialRecord = await _credentialService.GetAsync(context, THCredentialExchange.RecordId);
-                connectionId = credentialRecord.ConnectionId;
-
-                var offerJson = await AnonCreds.IssuerCreateCredentialOfferAsync(context.Wallet, credentialRecord.CredentialDefinitionId);
-                var offerJobj = JObject.Parse(offerJson);
-                var schemaId = offerJobj["schema_id"].ToObject<string>();
-
-                // Update credential record
-                credentialRecord.SchemaId = schemaId;
-                credentialRecord.OfferJson = offerJson;
-                credentialRecord.State = CredentialState.Offered;
-                credentialRecord.SetTag(TagConstants.IssuerDid, issuer.IssuerDid);
-                await _recordService.UpdateAsync(context.Wallet, credentialRecord);
-
-                credentialOffer = new CredentialOfferMessage
-                {
-                    CredentialPreview = new CredentialPreviewMessage
-                    {
-                        Attributes = CleanCredentialPreviewAttributes(credentialRecord.CredentialAttributesValues.ToArray())
-                    },
-                    Comment = "credential-offer", // ACA-Py requires comment
-                    Offers = new Attachment[]
-                    {
-                        new Attachment
-                        {
-                            Id = "libindy-cred-offer-0",
-                            MimeType = CredentialMimeTypes.ApplicationJsonMimeType,
-                            Data = new AttachmentContent
-                            {
-                                Base64 = offerJson.GetUTF8Bytes().ToBase64String()
-                            }
-                        }
-                    }
-                };
-
-                credentialOffer.ThreadFrom(threadId);
-
-                THCredentialExchange.State = TestHarnessCredentialExchangeState.OfferSent;
+                throw new NotSupportedException("Credential proposal not supported in .NET backchannel");
             }
             // Send Offer to start credential issuance flow
             else

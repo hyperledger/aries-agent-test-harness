@@ -6,16 +6,16 @@ name: test-harness-acapy-dotnet
 # Summary
 #
 # This runset uses the current main branch of ACA-Py for all of the agents except Bob (holder),
-# which uses the master branch of Aries Framework .NET. The runset covers all of the AIP 1.0 tests that 
-# are known to work with the Aries Framework .NET as the holder along with Revocation tests. Excluded 
+# which uses the master branch of Aries Framework .NET. The runset covers all of the AIP 1.0 tests that
+# are known to work with the Aries Framework .NET as the holder along with Revocation tests. Excluded
 # are those tests that involve Proof Proposals.
 #
 # Current
-# 
+#
 # The majority of tests are running and passing. T013-HIPE0011 is failing due to the Aries Framework Dotnet not supporting
-# presentations containing a non-revocation interval, with a non-revocable credential. This issue is being tracked in 
+# presentations containing a non-revocation interval, with a non-revocable credential. This issue is being tracked in
 # https://github.com/hyperledger/aries-framework-dotnet/issues/184
-# 
+#
 # *Status Note Updated: 2021.04.08*
 #
 # End
@@ -47,12 +47,12 @@ jobs:
         with:
           BUILD_AGENTS: "-a acapy-main -a dotnet-master"
           TEST_AGENTS: "-d acapy-main -b dotnet-master"
-          TEST_SCOPE: "-t @AcceptanceTest -t ~@wip -t ~@ProofProposal -t ~@RFC0023 -t ~@DIDExchangeConnection"
+          TEST_SCOPE: "-t @AcceptanceTest -t ~@wip -t ~@ProofProposal -t ~@RFC0023 -t ~@DIDExchangeConnection -t ~@CredProposalV1Start"
           REPORT_PROJECT: acapy-b-dotnet
         continue-on-error: true
       - name: run-send-gen-test-results-secure
         uses: ./test-harness/actions/run-send-gen-test-results-secure
         with:
-          REPORT_PROJECT: acapy-b-dotnet 
+          REPORT_PROJECT: acapy-b-dotnet
           ADMIN_USER: ${{ secrets.AllureAdminUser }}
           ADMIN_PW: ${{ secrets.AllureAdminPW }}

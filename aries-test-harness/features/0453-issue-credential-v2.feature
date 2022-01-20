@@ -82,57 +82,57 @@ Feature: RFC 0453 Aries Agent Issue Credential v2
       | credential_data   | updated_credential_data  |
       | Data_DL_MaxValues | Data_DL_NormalizedValues |
 
-  # @T003-RFC0453 @critical @wip @AcceptanceTest
-  # Scenario: Issue a credential with the Issuer beginning with an offer
-  #   Given "2" agents
-  #     | name | role   |
-  #     | Acme | issuer |
-  #     | Bob  | holder |
-  #   And "Acme" and "Bob" have an existing connection
-  #   When "Acme" offers a credential
-  #   And "Bob" requests the credential
-  #   And "Acme" issues the credential
-  #   And "Bob" acknowledges the credential issue
-  #   Then "Bob" has the credential issued
+# @T003-RFC0453 @critical @wip @AcceptanceTest
+# Scenario: Issue a credential with the Issuer beginning with an offer
+#   Given "2" agents
+#     | name | role   |
+#     | Acme | issuer |
+#     | Bob  | holder |
+#   And "Acme" and "Bob" have an existing connection
+#   When "Acme" offers a credential
+#   And "Bob" requests the credential
+#   And "Acme" issues the credential
+#   And "Bob" acknowledges the credential issue
+#   Then "Bob" has the credential issued
 
-  # @T004-RFC0453 @normal @wip @AcceptanceTest
-  # Scenario: Issue a credential with the Issuer beginning with an offer with negotiation
-  #   Given "2" agents
-  #     | name | role   |
-  #     | Acme | issuer |
-  #     | Bob  | holder |
-  #   And "Acme" and "Bob" have an existing connection
-  #   And "Acme" offers a credential
-  #   When "Bob" negotiates the offer with a proposal of the credential to "Acme"
-  #   And "Acme" Offers the credential
-  #   And "Bob" requests the credential
-  #   And "Acme" issues the credential
-  #   And "Bob" acknowledges the credential issue
-  #   Then "Bob" has the credential issued
+# @T004-RFC0453 @normal @wip @AcceptanceTest
+# Scenario: Issue a credential with the Issuer beginning with an offer with negotiation
+#   Given "2" agents
+#     | name | role   |
+#     | Acme | issuer |
+#     | Bob  | holder |
+#   And "Acme" and "Bob" have an existing connection
+#   And "Acme" offers a credential
+#   When "Bob" negotiates the offer with a proposal of the credential to "Acme"
+#   And "Acme" Offers the credential
+#   And "Bob" requests the credential
+#   And "Acme" issues the credential
+#   And "Bob" acknowledges the credential issue
+#   Then "Bob" has the credential issued
 
-  # @T005-RFC0453 @minor @wip @AcceptanceTest
-  # Scenario: Issue a credential with negotiation beginning from a credential request
-  #   Given "2" agents
-  #     | name | role   |
-  #     | Acme | issuer |
-  #     | Bob  | holder |
-  #   And "Acme" and "Bob" have an existing connection
-  #   When "Bob" requests the credential
-  #   And "Acme" offers a credential
-  #   When "Bob" negotiates the offer with a proposal of the credential to "Acme"
-  #   And "Acme" offers a credential
-  #   And "Acme" issues the credential
-  #   And "Bob" acknowledges the credential issue
-  #   Then "Bob" has the credential issued
+# @T005-RFC0453 @minor @wip @AcceptanceTest
+# Scenario: Issue a credential with negotiation beginning from a credential request
+#   Given "2" agents
+#     | name | role   |
+#     | Acme | issuer |
+#     | Bob  | holder |
+#   And "Acme" and "Bob" have an existing connection
+#   When "Bob" requests the credential
+#   And "Acme" offers a credential
+#   When "Bob" negotiates the offer with a proposal of the credential to "Acme"
+#   And "Acme" offers a credential
+#   And "Acme" issues the credential
+#   And "Bob" acknowledges the credential issue
+#   Then "Bob" has the credential issued
 
-  # @T006-RFC0453 @critical @wip @AcceptanceTest
-  # Scenario: Issue a credential with the Holder beginning with a request and is accepted
-  #   Given "2" agents
-  #     | name | role   |
-  #     | Acme | issuer |
-  #     | Bob  | holder |
-  #   And "Acme" and "Bob" have an existing connection
-  #   When "Bob" requests the credential
-  #   And "Acme" issues the credential
-  #   And "Bob" acknowledges the credential issue
-  #   Then "Bob" has the credential issued
+# @T006-RFC0453 @critical @wip @AcceptanceTest
+# Scenario: Issue a credential with the Holder beginning with a request and is accepted
+#   Given "2" agents
+#     | name | role   |
+#     | Acme | issuer |
+#     | Bob  | holder |
+#   And "Acme" and "Bob" have an existing connection
+#   When "Bob" requests the credential
+#   And "Acme" issues the credential
+#   And "Bob" acknowledges the credential issue
+#   Then "Bob" has the credential issued

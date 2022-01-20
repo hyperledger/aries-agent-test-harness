@@ -2,7 +2,7 @@ name: test-harness-dotnet-dotnet
 # RUNSET_NAME: "AF-.NET to AF-.NET"
 # Scope: AIP 1.0
 # Exceptions: Revocation and Proof Proposals
-# 
+#
 # Summary
 #
 # This runset uses the current main branch of Aries Framework .NET for all of the agents. The runset runs all of the tests in the suite
@@ -10,9 +10,9 @@ name: test-harness-dotnet-dotnet
 # and holders initiating present proof protocols using a "proposal" message are not included.
 #
 # Current
-# 
+#
 # All of the tests being executed in this runset are passing.
-# 
+#
 # *Status Note Updated: 2021.03.05*
 #
 # End
@@ -44,12 +44,12 @@ jobs:
         with:
           BUILD_AGENTS: "-a dotnet-master"
           TEST_AGENTS: "-d dotnet-master"
-          TEST_SCOPE: "-t @AcceptanceTest -t ~@wip -t ~@revocation -t ~@ProofProposal -t ~@RFC0023 -t ~@DIDExchangeConnection"
+          TEST_SCOPE: "-t @AcceptanceTest -t ~@wip -t ~@revocation -t ~@ProofProposal -t ~@RFC0023 -t ~@DIDExchangeConnection -t ~@CredProposalV1Start"
           REPORT_PROJECT: dotnet
         continue-on-error: true
       - name: run-send-gen-test-results-secure
         uses: ./test-harness/actions/run-send-gen-test-results-secure
         with:
-          REPORT_PROJECT: dotnet 
+          REPORT_PROJECT: dotnet
           ADMIN_USER: ${{ secrets.AllureAdminUser }}
           ADMIN_PW: ${{ secrets.AllureAdminPW }}

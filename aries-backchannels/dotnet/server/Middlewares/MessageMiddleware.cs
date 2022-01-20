@@ -6,6 +6,7 @@ using Hyperledger.Aries.Features.TrustPing;
 using Hyperledger.Aries.Agents;
 using Hyperledger.Aries.Features.PresentProof;
 using Hyperledger.Aries.Decorators.Threading;
+using Hyperledger.Aries.Features.IssueCredential;
 
 namespace DotNet.Backchannel.Middlewares
 {
@@ -13,14 +14,17 @@ namespace DotNet.Backchannel.Middlewares
     {
         private IMemoryCache _cache;
         private IProofService _proofService;
+        private ICredentialService _credentialService;
 
         public MessageAgentMiddleware(
             IMemoryCache memoryCache,
-            IProofService proofService
+            IProofService proofService,
+            ICredentialService credentialService
             )
         {
             _cache = memoryCache;
             _proofService = proofService;
+            _credentialService = credentialService;
         }
 
         /// <inheritdoc />
@@ -63,6 +67,26 @@ namespace DotNet.Backchannel.Middlewares
                         };
 
                         _cache.Set(THPresentationExchange.ThreadId, THPresentationExchange);
+
+                        break;
+                    }
+                // When we receive a credential offer message we need to create a TestHarnessCredentialExchange and
+                // store it in the cache for future use. This allow us to keep track of the current state of the credential exchange
+                case MessageTypes.IssueCredentialNames.OfferCredential:
+                case MessageTypesHttps.IssueCredentialNames.OfferCredential:
+                    {
+                        var message = messageContext.GetMessage<CredentialOfferMessage>();
+
+                        var credentialRecord = await _credentialService.GetByThreadIdAsync(agentContext, message.GetThreadId());
+
+                        var THCredentialExchange = new TestHarnessCredentialExchange
+                        {
+                            ThreadId = message.GetThreadId(),
+                            RecordId = credentialRecord.Id,
+                            State = TestHarnessCredentialExchangeState.OfferReceived,
+                        };
+
+                        _cache.Set(THCredentialExchange.ThreadId, THCredentialExchange);
 
                         break;
                     }

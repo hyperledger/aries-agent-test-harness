@@ -83,12 +83,9 @@ namespace DotNet.Backchannel.Controllers
         }
 
         [HttpPost("send-proposal")]
-        public async Task<IActionResult> SendPresentationProposalAsync(OperationBody body)
+        public Task<IActionResult> SendPresentationProposalAsync(OperationBody body)
         {
-            var connectionId = body.Id;
-            var proposal = body.Data;
-
-            throw new NotImplementedException();
+            throw new NotImplementedException("Send proposal not supported for .NET backchannel");
         }
 
         [HttpPost("send-request")]

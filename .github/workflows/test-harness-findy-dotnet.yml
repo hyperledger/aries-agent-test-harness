@@ -6,13 +6,13 @@ name: test-harness-findy-dotnet
 # Summary
 #
 # This runset uses the latest release of findy-agent for all of the agents except Bob (holder),
-# which uses the current main branch of Aries Framework DotNet. The runset covers all of the AIP 1.0 tests that 
+# which uses the current main branch of Aries Framework DotNet. The runset covers all of the AIP 1.0 tests that
 # are known to work with dotnet as the holder. Excluded are those tests that involve Revocation and Proof Proposals.
 #
 # Current
-# 
-# All test scenarios are passing. 
-# 
+#
+# All test scenarios are passing.
+#
 # *Status Note Updated: 2021.10.15*
 #
 # End
@@ -44,7 +44,7 @@ jobs:
         with:
           BUILD_AGENTS: "-a dotnet-master -a findy"
           TEST_AGENTS: "-d findy -b dotnet-master"
-          TEST_SCOPE: "-t @AcceptanceTest -t @AIP10 -t ~@wip -t ~@revocation -t ~@ProofProposal"
+          TEST_SCOPE: "-t @AcceptanceTest -t @AIP10 -t ~@wip -t ~@revocation -t ~@ProofProposal -t ~@CredProposalV1Start"
           REPORT_PROJECT: findy-b-dotnet
         continue-on-error: true
       - name: run-send-gen-test-results-secure

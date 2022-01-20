@@ -69,15 +69,9 @@ def step_impl(context, prover, issuer):
     # issue the credential to prover
     # If there is a schema_dict then we are working with multiple credential types, loop as many times as 
     # there are schemas and add the schema to context as the issue cred tests expect. 
-    if "Indy" in context.tags:
-        context_steps_start = f'''
-            When  "{prover}" proposes a credential to "{issuer}"
-            And '''
-    else:
-        context_steps_start = '''
-            When '''
     if len(context.schema_dict) == 0:
-        context_steps = context_steps_start + f''' "{issuer}" offers a credential
+        context_steps = f'''
+            When "{issuer}" offers a credential
             And "{prover}" requests the credential
             And  "{issuer}" issues the credential
             And "{prover}" acknowledges the credential issue
@@ -88,7 +82,8 @@ def step_impl(context, prover, issuer):
         for schema in context.schema_dict:
             context.credential_data = context.credential_data_dict[schema]
             context.schema = context.schema_dict[schema]
-            context_steps = context_steps_start + f''' "{issuer}" offers a credential
+            context_steps = f'''
+                When "{issuer}" offers a credential
                 And "{prover}" requests the credential
                 And  "{issuer}" issues the credential
                 And "{prover}" acknowledges the credential issue

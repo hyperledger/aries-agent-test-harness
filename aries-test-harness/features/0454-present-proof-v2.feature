@@ -14,24 +14,24 @@ Feature: RFC 0454 Aries agent present proof v2
       And "Faber" acknowledges the proof with formats
       Then "Bob" has the proof with formats verified
 
-      @CredFormat_Indy @RFC0592 @Schema_DriversLicense_v2 @CredProposalStart
+      @CredFormat_Indy @RFC0592 @Schema_DriversLicense_v2
       Examples:
          | issuer | credential_data   | request_for_proof               | presentation                   |
          | Acme   | Data_DL_MaxValues | proof_request_DL_address_v2     | presentation_DL_address_v2     |
          | Faber  | Data_DL_MaxValues | proof_request_DL_age_over_19_v2 | presentation_DL_age_over_19_v2 |
 
-      @CredFormat_JSON-LD @RFC0510 @Schema_DriversLicense_v2 @CredProposalStart @ProofType_Ed25519Signature2018 @DidMethod_key
+      @CredFormat_JSON-LD @RFC0510 @Schema_DriversLicense_v2 @ProofType_Ed25519Signature2018 @DidMethod_key
       Examples:
          | issuer | credential_data   | request_for_proof                  | presentation                      |
          | Acme   | Data_DL_MaxValues | proof_request_DL_address_v2_dif_pe | presentation_DL_address_v2_dif_pe |
 
-      @CredFormat_JSON-LD @RFC0510 @RFC0646 @Schema_DriversLicense_v2 @CredProposalStart @ProofType_BbsBlsSignature2020 @DidMethod_key
+      @CredFormat_JSON-LD @RFC0510 @RFC0646 @Schema_DriversLicense_v2 @ProofType_BbsBlsSignature2020 @DidMethod_key
       Examples:
          | issuer | credential_data   | request_for_proof                                   | presentation                      |
          | Acme   | Data_DL_MaxValues | proof_request_DL_address_v2_dif_pe_limit_disclosure | presentation_DL_address_v2_dif_pe |
 
 
-   @T002-RFC0454 @RFC0510 @critical @AcceptanceTest @DIDExchangeConnection @CredFormat_JSON-LD @Schema_Citizenship_Context @CredProposalStart
+   @T002-RFC0454 @RFC0510 @critical @AcceptanceTest @DIDExchangeConnection @CredFormat_JSON-LD @Schema_Citizenship_Context
    Scenario Outline: Present Proof of specific types and proof is acknowledged with a Citizenship credential type with a DID Exchange Connection
       Given "2" agents
          | name  | role     |

@@ -2,7 +2,7 @@ name: test-harness-javascript-dotnet
 # RUNSET_NAME: "AFJ to AF-.NET"
 # Scope: AIP 1.0
 # Exceptions: Revocation and Proof Proposals
-# 
+#
 # Summary
 #
 # This runset uses the current main branch of Aries Framework JavaScript for all of the agents except for Bob (the Holder), which
@@ -11,9 +11,9 @@ name: test-harness-javascript-dotnet
 # in Aries Framework .NET) are not executed.
 #
 # Current
-# 
+#
 # All of the tests being executed in this runset are passing.
-# 
+#
 # *Status Note Updated: 2021.03.05*
 #
 # End
@@ -45,7 +45,7 @@ jobs:
         with:
           BUILD_AGENTS: "-a javascript -a dotnet-master"
           TEST_AGENTS: "-d javascript -b dotnet-master"
-          TEST_SCOPE: "-t @AcceptanceTest -t ~@wip -t ~@revocation -t ~@RFC0023 -t ~@DIDExchangeConnection -t ~@ProofProposal"
+          TEST_SCOPE: "-t @AcceptanceTest -t ~@wip -t ~@revocation -t ~@RFC0023 -t ~@DIDExchangeConnection -t ~@ProofProposal -t ~@CredProposalV1Start"
           REPORT_PROJECT: javascript-b-dotnet
         continue-on-error: true
       - name: run-send-gen-test-results-secure
