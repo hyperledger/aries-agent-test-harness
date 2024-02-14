@@ -159,7 +159,7 @@ def setup_scenario_context(context: Context, scenario: Scenario):
     #
     # defaultdict allows to instantly append without creating list first
     # context.credential_id_dict["Schema_DriversLicense_v2"].append("799519c6-c635-46e4-a14d-9af52e79e894")
-    context.credential_id_dict = defaultdict(list)
+    context.credential_id_dict = defaultdict()
 
     # Whether revocation is supported
     context.support_revocation = False

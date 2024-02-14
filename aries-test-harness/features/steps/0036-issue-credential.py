@@ -443,9 +443,10 @@ def step_impl(context, holder):
     assert resp_json["state"] == "done"
 
     # Store credential id
-    context.credential_id_dict[context.schema["schema_name"]].append(
-        resp_json["credential_id"]
-    )
+    # context.credential_id_dict[context.schema["schema_name"]].append(
+    #     resp_json["credential_id"]
+    # )
+    context.credential_id_dict[context.schema["schema_name"]] = resp_json["credential_id"]
 
     # Verify issuer status
     # This is returning none instead of Done. Should this be the case. Needs investigation.
@@ -463,7 +464,14 @@ def step_impl(context, holder):
         resp_json = json.loads(resp_text)
         context.cred_rev_id = resp_json["revocation_id"]
         context.rev_reg_id = resp_json["revoc_reg_id"]
+        # some tests will pick up the revocation ids from the schema collection so add them there as well.
+        if "cred_rev_id" not in context.credential_id_dict[context.schema["schema_name"]]:
+            context.credential_id_dict[context.schema["schema_name"]]["cred_rev_id"] = []
+        context.credential_id_dict[context.schema["schema_name"]]["cred_rev_id"] = resp_json["cred_rev_id"]
 
+        if "rev_reg_id" not in context.credential_id_dict[context.schema["schema_name"]]:
+            context.credential_id_dict[context.schema["schema_name"]]["rev_reg_id"] = []
+        context.credential_id_dict[context.schema["schema_name"]]["rev_reg_id"] = resp_json["rev_reg_id"]
 
 @then('"{holder}" has the credential issued')
 def step_impl(context, holder):

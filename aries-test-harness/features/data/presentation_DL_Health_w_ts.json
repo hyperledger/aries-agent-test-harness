@@ -1,0 +1,18 @@
+{
+   "presentation": {
+      "comment": "Send presentation with a request from 2 credentials checking revocation status on both (top level).",
+      "timestamp": "now",
+      "requested_attributes": {
+         "address_attrs": {
+            "cred_type_name": "Schema_DriversLicense_Revoc",
+            "cred_id": "replace_me",
+            "revealed": true
+         },
+         "consent_attrs": {
+            "cred_type_name": "Schema_Health_Consent_Revoc",
+            "cred_id": "replace me",
+            "revealed": true
+         }
+      }
+   }
+}
