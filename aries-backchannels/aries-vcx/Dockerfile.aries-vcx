@@ -14,8 +14,8 @@ RUN apk update && apk upgrade && \
 USER indy
 WORKDIR /home/indy
 
-ARG RUST_VER="1.64.0"
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain $RUST_VER --default-host x86_64-unknown-linux-musl
+ARG RUST_VER="1.65.0"
+RUN curl https://sh.rustup.rs -skSf | sh -s -- -y --default-toolchain $RUST_VER --default-host x86_64-unknown-linux-musl
 ENV PATH="/home/indy/.cargo/bin:$PATH" RUSTFLAGS="-C target-feature=-crt-static"
 
 USER root
@@ -25,11 +25,11 @@ USER indy
 RUN cargo new --bin aries-vcx-backchannel
 WORKDIR ./aries-vcx-backchannel
 COPY --chown=indy:indy ./aries-vcx/Cargo.lock ./aries-vcx/Cargo.toml ./
-RUN cargo build --release
+RUN cargo build
 RUN rm src/*.rs
-RUN rm ./target/release/deps/aries_vcx_backchannel*
+RUN rm ./target/debug/deps/aries_vcx_backchannel*
 COPY --chown=indy:indy  ./aries-vcx/src ./src
-RUN cargo build --release
+RUN cargo build
 
 FROM alpine:3.15.4
 
@@ -43,5 +43,5 @@ RUN apk update && apk upgrade && \
         zeromq-dev
 
 RUN mkdir /resource
-COPY --from=builder /home/indy/aries-vcx-backchannel/target/release/aries-vcx-backchannel .
+COPY --from=builder /home/indy/aries-vcx-backchannel/target/debug/aries-vcx-backchannel .
 ENTRYPOINT ["./aries-vcx-backchannel"]

@@ -85,7 +85,9 @@ pub async fn initialize(port: u32) -> AriesAgent {
         .await
         .expect("Failed to download the genesis file");
     let dockerhost = std::env::var("DOCKERHOST").unwrap_or("localhost".to_string());
-    let service_endpoint = format!("http://{}:{}/didcomm", dockerhost, port);
+    let service_endpoint = format!("http://{}:{}/didcomm", dockerhost, port)
+        .parse()
+        .unwrap();
     let init_config = InitConfig {
         enterprise_seed,
         pool_config: PoolInitConfig {
@@ -98,7 +100,7 @@ pub async fn initialize(port: u32) -> AriesAgent {
             wallet_kdf: "RAW".to_string(),
         },
         agency_config: None,
-        service_endpoint
+        service_endpoint,
     };
     AriesAgent::initialize(init_config).await.unwrap()
 }

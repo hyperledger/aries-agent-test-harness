@@ -2,10 +2,11 @@ use crate::controllers::Request;
 use crate::error::{HarnessError, HarnessErrorType, HarnessResult};
 use crate::{soft_assert_eq, HarnessAgent, State};
 use actix_web::{get, post, web, Responder};
-use aries_vcx_agent::aries_vcx::messages::concepts::ack::Ack;
-use aries_vcx_agent::aries_vcx::messages::protocols::connection::invite::{
+use aries_vcx_agent::aries_vcx::handlers::util::AnyInvitation;
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::connection::invitation::{
     Invitation, PairwiseInvitation,
 };
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::notification::ack::Ack;
 use aries_vcx_agent::aries_vcx::protocols::connection::{State as ConnectionState, ThinState};
 use std::sync::RwLock;
 
@@ -35,7 +36,7 @@ fn to_backchannel_state(state: ThinState) -> State {
 }
 
 impl HarnessAgent {
-    pub async fn create_invitation(&self) -> HarnessResult<String> {
+    pub async fn create_connection_invitation(&self) -> HarnessResult<String> {
         let invitation = self
             .aries_agent
             .connections()
@@ -45,21 +46,24 @@ impl HarnessAgent {
         Ok(json!({ "connection_id": id, "invitation": invitation }).to_string())
     }
 
-    pub async fn receive_invitation(&self, invite: PairwiseInvitation) -> HarnessResult<String> {
+    pub async fn receive_connection_invitation(
+        &self,
+        invite: PairwiseInvitation,
+    ) -> HarnessResult<String> {
         let id = self
             .aries_agent
             .connections()
-            .receive_invitation(Invitation::Pairwise(invite))
+            .receive_invitation(AnyInvitation::Con(Invitation::Pairwise(invite)))
             .await?;
         Ok(json!({ "connection_id": id }).to_string())
     }
 
-    pub async fn send_request(&self, id: &str) -> HarnessResult<String> {
+    pub async fn send_connection_request(&self, id: &str) -> HarnessResult<String> {
         self.aries_agent.connections().send_request(id).await?;
         Ok(json!({ "connection_id": id }).to_string())
     }
 
-    pub async fn accept_request(&self, id: &str) -> HarnessResult<String> {
+    pub async fn accept_connection_request(&self, id: &str) -> HarnessResult<String> {
         // TODO: Handle case of multiple requests received
         if !matches!(
             self.aries_agent.connections().get_state(id)?,
@@ -73,13 +77,13 @@ impl HarnessAgent {
         Ok(json!({ "connection_id": id }).to_string())
     }
 
-    pub async fn send_ack(&self, id: &str) -> HarnessResult<String> {
+    pub async fn send_connection_ack(&self, id: &str) -> HarnessResult<String> {
         self.aries_agent.connections().send_ack(id).await?;
         Ok(json!({ "connection_id": id }).to_string())
     }
 
-    pub async fn process_ack(&self, ack: Ack) -> HarnessResult<String> {
-        let id = ack.get_thread_id();
+    pub async fn process_connection_ack(&self, ack: Ack) -> HarnessResult<String> {
+        let id = ack.decorators.thread.thid.to_string();
         self.aries_agent.connections().process_ack(&id, ack).await?;
         Ok(json!({ "connection_id": id }).to_string())
     }
@@ -97,18 +101,26 @@ impl HarnessAgent {
 
 #[post("/create-invitation")]
 pub async fn create_invitation(agent: web::Data<RwLock<HarnessAgent>>) -> impl Responder {
-    agent.read().unwrap().create_invitation().await
+    agent.read().unwrap().create_connection_invitation().await
 }
 
 #[post("/receive-invitation")]
 pub async fn receive_invitation(
-    req: web::Json<Request<PairwiseInvitation>>,
+    req: web::Json<Request<Option<PairwiseInvitation>>>,
     agent: web::Data<RwLock<HarnessAgent>>,
 ) -> impl Responder {
     agent
         .read()
         .unwrap()
-        .receive_invitation(req.data.clone())
+        .receive_connection_invitation(
+            req.data
+                .as_ref()
+                .ok_or(HarnessError::from_msg(
+                    HarnessErrorType::InvalidJson,
+                    "Failed to deserialize pairwise invitation",
+                ))?
+                .clone(),
+        )
         .await
 }
 
@@ -117,7 +129,7 @@ pub async fn send_request(
     req: web::Json<Request<()>>,
     agent: web::Data<RwLock<HarnessAgent>>,
 ) -> impl Responder {
-    agent.read().unwrap().send_request(&req.id).await
+    agent.read().unwrap().send_connection_request(&req.id).await
 }
 
 #[post("/accept-request")]
@@ -125,7 +137,11 @@ pub async fn accept_request(
     req: web::Json<Request<()>>,
     agent: web::Data<RwLock<HarnessAgent>>,
 ) -> impl Responder {
-    agent.read().unwrap().accept_request(&req.id).await
+    agent
+        .read()
+        .unwrap()
+        .accept_connection_request(&req.id)
+        .await
 }
 
 #[get("/{connection_id}")]
@@ -157,7 +173,7 @@ pub async fn send_ack(
     req: web::Json<Request<Comment>>,
     agent: web::Data<RwLock<HarnessAgent>>,
 ) -> impl Responder {
-    agent.read().unwrap().send_ack(&req.id).await
+    agent.read().unwrap().send_connection_ack(&req.id).await
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {

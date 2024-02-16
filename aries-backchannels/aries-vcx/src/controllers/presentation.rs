@@ -7,12 +7,13 @@ use aries_vcx_agent::aries_vcx::common::proofs::proof_request::ProofRequestDataB
 use aries_vcx_agent::aries_vcx::common::proofs::proof_request_internal::{
     AttrInfo, NonRevokedInterval, PredicateInfo,
 };
-use aries_vcx_agent::aries_vcx::messages::protocols::proof_presentation::presentation_proposal::{
-    Attribute, Predicate, PresentationProposalData,
+use aries_vcx_agent::aries_vcx::handlers::util::PresentationProposalData;
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::present_proof::propose::{
+    Predicate, PresentationAttr,
 };
-use aries_vcx_agent::aries_vcx::messages::status::Status;
 use aries_vcx_agent::aries_vcx::protocols::proof_presentation::prover::state_machine::ProverState;
 use aries_vcx_agent::aries_vcx::protocols::proof_presentation::verifier::state_machine::VerifierState;
+use aries_vcx_agent::aries_vcx::protocols::proof_presentation::verifier::verification_status::PresentationVerificationStatus;
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -44,7 +45,7 @@ pub struct ProofRequestDataWrapper {
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct PresentationProposal {
     comment: String,
-    attributes: Vec<Attribute>,
+    attributes: Vec<PresentationAttr>,
     predicates: Vec<Predicate>,
 }
 
@@ -119,14 +120,14 @@ impl HarnessAgent {
         &self,
         presentation_proposal: &PresentationProposalWrapper,
     ) -> HarnessResult<String> {
-        let mut proposal_data = PresentationProposalData::create();
+        let mut proposal_data = PresentationProposalData::default();
         for attr in presentation_proposal
             .presentation_proposal
             .attributes
             .clone()
             .into_iter()
         {
-            proposal_data = proposal_data.add_attribute(attr.clone());
+            proposal_data.attributes.push(attr.clone());
         }
         let id = self
             .aries_agent
@@ -162,7 +163,8 @@ impl HarnessAgent {
     }
 
     pub async fn verify_presentation(&self, id: &str) -> HarnessResult<String> {
-        let verified = self.aries_agent.verifier().get_presentation_status(id)? == Status::Success;
+        let verified = self.aries_agent.verifier().get_presentation_status(id)?
+            == PresentationVerificationStatus::Valid;
         let state = self.aries_agent.verifier().get_state(id)?;
         Ok(
             json!({ "state": to_backchannel_state_verifier(state), "verified": verified })

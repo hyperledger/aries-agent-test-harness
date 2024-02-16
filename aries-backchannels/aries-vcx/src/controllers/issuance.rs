@@ -3,18 +3,33 @@ use crate::error::{HarnessError, HarnessErrorType, HarnessResult};
 use crate::soft_assert_eq;
 use crate::{HarnessAgent, State};
 use actix_web::{get, post, web, Responder};
-use aries_vcx_agent::aries_vcx::messages::concepts::mime_type::MimeType;
-use aries_vcx_agent::aries_vcx::messages::protocols::issuance::credential_offer::OfferInfo;
-use aries_vcx_agent::aries_vcx::messages::protocols::issuance::credential_proposal::CredentialProposalData;
-use aries_vcx_agent::aries_vcx::messages::protocols::issuance::CredentialPreviewData;
+use aries_vcx_agent::aries_vcx::handlers::util::OfferInfo;
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::cred_issuance::{CredentialPreview as VcxCredentialPreview, CredentialAttr};
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::cred_issuance::propose_credential::{ProposeCredential, ProposeCredentialContent};
 use aries_vcx_agent::aries_vcx::protocols::issuance::holder::state_machine::HolderState;
 use aries_vcx_agent::aries_vcx::protocols::issuance::issuer::state_machine::IssuerState;
+use uuid::Uuid;
 use std::sync::RwLock;
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+struct CredentialPreview(VcxCredentialPreview);
+
+impl CredentialPreview {
+    pub fn new(attributes: Vec<CredentialAttr>) -> Self {
+        CredentialPreview(VcxCredentialPreview::new(attributes))
+    }
+}
+
+impl Default for CredentialPreview {
+    fn default() -> Self {
+        CredentialPreview(VcxCredentialPreview::new(vec![]))
+    }
+}
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct CredentialOffer {
     cred_def_id: String,
-    credential_preview: CredentialPreviewData,
+    credential_preview: CredentialPreview,
     connection_id: String,
 }
 
@@ -25,14 +40,14 @@ pub struct CredentialProposal {
     schema_name: String,
     cred_def_id: String,
     schema_version: String,
-    credential_proposal: CredentialPreviewData,
+    credential_proposal: CredentialPreview,
     connection_id: String,
     schema_id: String,
 }
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct Credential {
-    credential_preview: CredentialPreviewData,
+    credential_preview: CredentialPreview,
     #[serde(default)]
     comment: Option<String>,
 }
@@ -110,23 +125,24 @@ impl HarnessAgent {
         &self,
         cred_proposal: &CredentialProposal,
     ) -> HarnessResult<String> {
-        let mut proposal_data = CredentialProposalData::create()
-            .set_schema_id(cred_proposal.schema_id.clone())
-            .set_cred_def_id(cred_proposal.cred_def_id.clone());
-        for attr in cred_proposal
-            .credential_proposal
-            .attributes
-            .clone()
-            .into_iter()
-        {
-            proposal_data =
-                proposal_data.add_credential_preview_data(&attr.name, &attr.value, MimeType::Plain);
-        }
+        let proposal_id = Uuid::new_v4().to_string();
+        let attrs = cred_proposal.credential_proposal.0.attributes.clone();
+        let preview = CredentialPreview::new(attrs);
+
+        let content = ProposeCredentialContent::new(
+            preview.0,
+            cred_proposal.schema_id.clone(),
+            cred_proposal.cred_def_id.clone(),
+        );
+        let proposal_data =
+            ProposeCredential::with_decorators(proposal_id.clone(), content, Default::default());
+
         let id = self
             .aries_agent
             .holder()
             .send_credential_proposal(&cred_proposal.connection_id, proposal_data)
             .await?;
+        assert_eq!(id, proposal_id); // TODO: Remove once verified
         let state = to_backchannel_state_holder(self.aries_agent.holder().get_state(&id)?);
         Ok(json!({ "state": state, "thread_id": id }).to_string())
     }
@@ -171,7 +187,7 @@ impl HarnessAgent {
         };
         let (offer_info, id) = if id.is_empty() {
             let credential_preview =
-                serde_json::to_string(&cred_offer.credential_preview.attributes)?;
+                serde_json::to_string(&cred_offer.credential_preview.0.attributes)?;
             let (tails_file, rev_reg_id) = get_tails_rev_id(&cred_offer.cred_def_id)?;
             (
                 OfferInfo {
@@ -184,11 +200,12 @@ impl HarnessAgent {
             )
         } else {
             let proposal = self.aries_agent.issuer().get_proposal(id)?;
-            let (tails_file, rev_reg_id) = get_tails_rev_id(&proposal.cred_def_id)?;
+            let (tails_file, rev_reg_id) = get_tails_rev_id(&proposal.content.cred_def_id)?;
             (
                 OfferInfo {
-                    credential_json: proposal.credential_proposal.to_string().unwrap(),
-                    cred_def_id: proposal.cred_def_id.clone(),
+                    credential_json: serde_json::to_string(&proposal.content.credential_proposal)
+                        .unwrap(),
+                    cred_def_id: proposal.content.cred_def_id.clone(),
                     rev_reg_id,
                     tails_file,
                 },

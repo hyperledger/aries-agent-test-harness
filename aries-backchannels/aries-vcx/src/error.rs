@@ -1,7 +1,7 @@
 use crate::error::aries_vcx::common::primitives::credential_definition::CredentialDefConfigBuilderError;
 use actix_web::{error, http::StatusCode, HttpResponse, HttpResponseBuilder};
 use aries_vcx_agent::aries_vcx::common::proofs::proof_request::ProofRequestDataBuilderError;
-use aries_vcx_agent::aries_vcx::messages::errors::error::MessagesError;
+use aries_vcx_agent::aries_vcx::messages::error::MsgTypeError;
 use aries_vcx_agent::aries_vcx::{
     self, common::primitives::credential_definition::RevocationDetailsBuilderError,
 };
@@ -51,6 +51,7 @@ impl error::ResponseError for HarnessError {
             | HarnessErrorType::RequestNotReceived
             | HarnessErrorType::InvalidJson => StatusCode::NOT_ACCEPTABLE,
             HarnessErrorType::NotFoundError => StatusCode::NOT_FOUND,
+            HarnessErrorType::InvalidState => StatusCode::BAD_REQUEST,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -72,6 +73,18 @@ impl HarnessError {
 
 impl std::convert::From<aries_vcx::errors::error::AriesVcxError> for HarnessError {
     fn from(vcx_err: aries_vcx::errors::error::AriesVcxError) -> HarnessError {
+        let kind = HarnessErrorType::InternalServerError;
+        HarnessError {
+            message: vcx_err.to_string(),
+            kind,
+        }
+    }
+}
+
+impl std::convert::From<aries_vcx::aries_vcx_core::errors::error::AriesVcxCoreError>
+    for HarnessError
+{
+    fn from(vcx_err: aries_vcx::aries_vcx_core::errors::error::AriesVcxCoreError) -> HarnessError {
         let kind = HarnessErrorType::InternalServerError;
         HarnessError {
             message: vcx_err.to_string(),
@@ -150,10 +163,10 @@ impl std::convert::From<AgentError> for HarnessError {
     }
 }
 
-impl std::convert::From<MessagesError> for HarnessError {
-    fn from(err: MessagesError) -> HarnessError {
+impl std::convert::From<MsgTypeError> for HarnessError {
+    fn from(err: MsgTypeError) -> HarnessError {
         let kind = HarnessErrorType::InternalServerError;
-        let message = format!("MessagesError: {:?}", err.to_string());
+        let message = format!("MsgTypeError: {:?}", err.to_string());
         HarnessError { message, kind }
     }
 }

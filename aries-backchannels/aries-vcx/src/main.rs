@@ -17,19 +17,13 @@ extern crate uuid;
 use std::sync::RwLock;
 
 use crate::controllers::{
-    connection,
-    credential_definition,
-    general,
-    issuance,
-    presentation,
-    revocation,
-    schema,
-    didcomm
+    connection, credential_definition, didcomm, general, issuance, presentation, revocation, schema,
 };
 use actix_web::{middleware, web, App, HttpServer};
 use clap::Parser;
 
-use aries_vcx_agent::Agent as AriesAgent;
+use aries_vcx_agent::{aries_vcx::messages::AriesMessage, Agent as AriesAgent};
+use controllers::{did_exchange, out_of_band};
 
 #[derive(Parser)]
 struct Opts {
@@ -96,7 +90,9 @@ macro_rules! soft_assert_eq {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"));
+    env_logger::init_from_env(
+        env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
+    );
     let opts: Opts = Opts::parse();
 
     let host = std::env::var("HOST").unwrap_or("0.0.0.0".to_string());
@@ -113,6 +109,7 @@ async fn main() -> std::io::Result<()> {
                 aries_agent: aries_agent.clone(),
                 status: Status::Active,
             })))
+            .app_data(web::Data::new(RwLock::new(Vec::<AriesMessage>::new())))
             .service(
                 web::scope("/agent")
                     .configure(connection::config)
@@ -121,15 +118,15 @@ async fn main() -> std::io::Result<()> {
                     .configure(issuance::config)
                     .configure(revocation::config)
                     .configure(presentation::config)
-                    .configure(general::config)
+                    .configure(out_of_band::config)
+                    .configure(did_exchange::config)
+                    .configure(general::config),
             )
-            .service(
-                web::scope("/didcomm").route("", web::post().to(didcomm::receive_message))
-            )
+            .service(web::scope("/didcomm").route("", web::post().to(didcomm::receive_message)))
     })
     .keep_alive(std::time::Duration::from_secs(30))
     .client_request_timeout(std::time::Duration::from_secs(30))
-    .workers(2)
+    .workers(1)
     .bind(format!("{}:{}", host, opts.port))?
     .run()
     .await

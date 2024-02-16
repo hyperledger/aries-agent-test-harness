@@ -6,7 +6,7 @@ authors = ["Absa Group Limited", "Hyperledger Indy Contributors <hyperledger-ind
 description = "Backchannel for aries-vcx"
 
 [dependencies]
-actix-web = "4.2.1"
+actix-web = "4"
 derive_more = "0.99.14"
 clap = { version = "3.2.22", features = ["derive"] }
 reqwest = { version = "0.11.9", features = ["json", "multipart", "blocking"] }
@@ -17,7 +17,8 @@ serde_derive = "1.0.97"
 log = "0.4.17"
 env_logger = "0.9.1"
 uuid = { version = "0.8.2", features = ["serde", "v4"] }
-aries-vcx-agent = { git = "https://github.com/hyperledger/aries-vcx.git", rev = "451f63cfeb5f6cc3636041a27cedfffea08d8a96" }
+# aries-vcx-agent = { git = "https://github.com/hyperledger/aries-vcx.git", rev = "a9d9e827add1fd42372281ba2413c56ca519e532" }
+aries-vcx-agent = { path = "/Users/ab006rh/Source/aries-vcx/agents/rust/aries-vcx-agent" }
 
 [profile.release]
 debug = 0
