@@ -133,10 +133,10 @@ usage () {
         (this is *required* when testing with a Mobile agent)
 
     Examples:
-    $0 run -a acapy -b vcx -f vcx -m acapy  - Run all the tests using the specified agents per role
-    $0 run -d vcx                           - Run all tests for all features using the vcx agent in all roles
-    $0 run -d acapy -t @SmokeTest -t @P1    - Run the tests tagged @SmokeTest and/or @P1 (priority 1) using all ACA-Py agents
-    $0 run -d acapy -b mobile -n -t @MobileTest  - Run the mobile tests using ngrok endpoints
+    $0 run -a acapy -b aries-vcx -f aries-vcx -m acapy  - Run all the tests using the specified agents per role
+    $0 run -d aries-vcx                         - Run all tests for all features using the aries-vcx agent in all roles
+    $0 run -d acapy -t @SmokeTest -t @P1        - Run the tests tagged @SmokeTest and/or @P1 (priority 1) using all ACA-Py agents
+    $0 run -d acapy -b mobile -n -t @MobileTest - Run the mobile tests using ngrok endpoints
 
   runset - Run the set of tests for a combination of Test Agents using the parameters in the daily, GitHub Action run "runsets".
       To see full set of options for the "runset" command, execute "./manage runset -h"
