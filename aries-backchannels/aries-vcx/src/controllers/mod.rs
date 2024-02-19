@@ -2,7 +2,6 @@ use serde::Deserialize;
 
 pub mod connection;
 pub mod credential_definition;
-pub mod did_exchange;
 pub mod didcomm;
 pub mod general;
 pub mod issuance;

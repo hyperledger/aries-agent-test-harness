@@ -6,6 +6,7 @@ use aries_vcx_agent::aries_vcx::{
     self, common::primitives::credential_definition::RevocationDetailsBuilderError,
 };
 use aries_vcx_agent::AgentError;
+use aries_vcx_agent::aries_vcx::did_parser::ParseError;
 use derive_more::{Display, Error};
 
 pub type HarnessResult<T> = Result<T, HarnessError>;
@@ -165,6 +166,22 @@ impl std::convert::From<AgentError> for HarnessError {
 
 impl std::convert::From<MsgTypeError> for HarnessError {
     fn from(err: MsgTypeError) -> HarnessError {
+        let kind = HarnessErrorType::InternalServerError;
+        let message = format!("MsgTypeError: {:?}", err.to_string());
+        HarnessError { message, kind }
+    }
+}
+
+impl std::convert::From<ParseError> for HarnessError {
+    fn from(err: ParseError) -> HarnessError {
+        let kind = HarnessErrorType::InternalServerError;
+        let message = format!("MsgTypeError: {:?}", err.to_string());
+        HarnessError { message, kind }
+    }
+}
+
+impl std::convert::From<anoncreds_types::Error> for HarnessError {
+    fn from(err: anoncreds_types::Error) -> HarnessError {
         let kind = HarnessErrorType::InternalServerError;
         let message = format!("MsgTypeError: {:?}", err.to_string());
         HarnessError { message, kind }

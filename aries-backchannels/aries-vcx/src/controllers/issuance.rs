@@ -4,21 +4,16 @@ use crate::soft_assert_eq;
 use crate::{HarnessAgent, State};
 use actix_web::{get, post, web, Responder};
 use aries_vcx_agent::aries_vcx::handlers::util::OfferInfo;
-use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::cred_issuance::{CredentialPreview as VcxCredentialPreview, CredentialAttr};
-use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::cred_issuance::propose_credential::{ProposeCredential, ProposeCredentialContent};
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::cred_issuance::v1::{CredentialPreviewV1 as VcxCredentialPreview, CredentialPreviewV1};
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::cred_issuance::v1::propose_credential::{ProposeCredentialV1, ProposeCredentialV1Content};
 use aries_vcx_agent::aries_vcx::protocols::issuance::holder::state_machine::HolderState;
 use aries_vcx_agent::aries_vcx::protocols::issuance::issuer::state_machine::IssuerState;
 use uuid::Uuid;
 use std::sync::RwLock;
+use anoncreds_types::data_types::identifiers::cred_def_id::CredentialDefinitionId;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct CredentialPreview(VcxCredentialPreview);
-
-impl CredentialPreview {
-    pub fn new(attributes: Vec<CredentialAttr>) -> Self {
-        CredentialPreview(VcxCredentialPreview::new(attributes))
-    }
-}
 
 impl Default for CredentialPreview {
     fn default() -> Self {
@@ -61,9 +56,9 @@ fn to_backchannel_state_issuer(state: IssuerState) -> State {
     match state {
         IssuerState::Initial => State::Initial,
         IssuerState::ProposalReceived | IssuerState::OfferSet => State::ProposalReceived,
-        IssuerState::OfferSent => State::OfferSent,
+        // IssuerState::OfferSent => State::OfferSent, // todo: we used to track "io state" in vcx, now we don't - will this fail some AATH cases?
         IssuerState::RequestReceived => State::RequestReceived,
-        IssuerState::CredentialSent => State::CredentialSent,
+        IssuerState::CredentialSet => State::CredentialSent,
         IssuerState::Finished => State::Done,
         IssuerState::Failed => State::Failure,
     }
@@ -72,9 +67,9 @@ fn to_backchannel_state_issuer(state: IssuerState) -> State {
 fn to_backchannel_state_holder(state: HolderState) -> State {
     match state {
         HolderState::Initial => State::Initial,
-        HolderState::ProposalSent => State::ProposalSent,
+        HolderState::ProposalSet => State::ProposalSent,
         HolderState::OfferReceived => State::OfferReceived,
-        HolderState::RequestSent => State::RequestSent,
+        HolderState::RequestSet => State::RequestSent,
         HolderState::Finished => State::Done,
         HolderState::Failed => State::Failure,
     }
@@ -127,15 +122,16 @@ impl HarnessAgent {
     ) -> HarnessResult<String> {
         let proposal_id = Uuid::new_v4().to_string();
         let attrs = cred_proposal.credential_proposal.0.attributes.clone();
-        let preview = CredentialPreview::new(attrs);
 
-        let content = ProposeCredentialContent::new(
-            preview.0,
-            cred_proposal.schema_id.clone(),
-            cred_proposal.cred_def_id.clone(),
-        );
-        let proposal_data =
-            ProposeCredential::with_decorators(proposal_id.clone(), content, Default::default());
+        let content = ProposeCredentialV1Content::builder()
+            .schema_id(cred_proposal.schema_id.clone())
+            .cred_def_id(cred_proposal.cred_def_id.clone())
+            .credential_proposal(CredentialPreviewV1::new(attrs.clone()))
+            .build();
+        let proposal_data = ProposeCredentialV1::builder()
+            .id(proposal_id.clone())
+            .content(content)
+            .build();
 
         let id = self
             .aries_agent
@@ -192,7 +188,7 @@ impl HarnessAgent {
             (
                 OfferInfo {
                     credential_json: credential_preview,
-                    cred_def_id: cred_offer.cred_def_id.clone(),
+                    cred_def_id: CredentialDefinitionId::new(&cred_offer.cred_def_id)?,
                     rev_reg_id,
                     tails_file,
                 },
@@ -205,7 +201,7 @@ impl HarnessAgent {
                 OfferInfo {
                     credential_json: serde_json::to_string(&proposal.content.credential_proposal)
                         .unwrap(),
-                    cred_def_id: proposal.content.cred_def_id.clone(),
+                    cred_def_id: CredentialDefinitionId::new(&proposal.content.cred_def_id)? ,
                     rev_reg_id,
                     tails_file,
                 },

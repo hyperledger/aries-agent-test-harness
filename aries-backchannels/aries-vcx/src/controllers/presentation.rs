@@ -8,7 +8,7 @@ use aries_vcx_agent::aries_vcx::common::proofs::proof_request_internal::{
     AttrInfo, NonRevokedInterval, PredicateInfo,
 };
 use aries_vcx_agent::aries_vcx::handlers::util::PresentationProposalData;
-use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::present_proof::propose::{
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::present_proof::v1::propose::{
     Predicate, PresentationAttr,
 };
 use aries_vcx_agent::aries_vcx::protocols::proof_presentation::prover::state_machine::ProverState;
@@ -16,6 +16,7 @@ use aries_vcx_agent::aries_vcx::protocols::proof_presentation::verifier::state_m
 use aries_vcx_agent::aries_vcx::protocols::proof_presentation::verifier::verification_status::PresentationVerificationStatus;
 use std::collections::HashMap;
 use std::sync::RwLock;
+use aries_vcx_agent::aries_vcx::aries_vcx_core::anoncreds::base_anoncreds::BaseAnonCreds;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct PresentationRequestWrapper {
@@ -97,10 +98,10 @@ impl HarnessAgent {
             .non_revoked(req_data.non_revoked)
             .nonce(
                 self.aries_agent
-                    .profile()
-                    .inject_anoncreds()
+                    .anoncreds()
                     .generate_nonce()
-                    .await?,
+                    .await?
+                    .to_string(),
             )
             .build()?;
         let id = self

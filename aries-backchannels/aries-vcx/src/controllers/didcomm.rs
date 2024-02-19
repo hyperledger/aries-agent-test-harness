@@ -11,6 +11,8 @@ use aries_vcx_agent::aries_vcx::{
 };
 
 use std::sync::RwLock;
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::cred_issuance::v1::CredentialIssuanceV1;
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::present_proof::v1::PresentProofV1;
 
 impl HarnessAgent {
     async fn handle_connection_msg(&self, msg: Connection) -> HarnessResult<()> {
@@ -67,9 +69,25 @@ impl HarnessAgent {
         connection_ids: Vec<String>,
         sender_vk: &str,
     ) -> HarnessResult<()> {
+        match msg {
+            CredentialIssuance::V1(msg) => {
+                self.handle_issuance_msg_v1(msg, connection_ids, sender_vk).await
+            }
+            CredentialIssuance::V2(_) => {
+                unimplemented!("V2 issuance is not implemented for aries-vcx aath")
+            }
+        }
+    }
+
+        async fn handle_issuance_msg_v1(
+        &self,
+        msg: CredentialIssuanceV1,
+        connection_ids: Vec<String>,
+        sender_vk: &str,
+    ) -> HarnessResult<()> {
         let connection_id = connection_ids.last();
         match msg {
-            CredentialIssuance::OfferCredential(offer) => {
+            CredentialIssuanceV1::OfferCredential(offer) => {
                 if connection_ids.len() == 1 {
                     self.aries_agent
                         .holder()
@@ -81,7 +99,7 @@ impl HarnessAgent {
                     ));
                 }
             }
-            CredentialIssuance::ProposeCredential(proposal) => {
+            CredentialIssuanceV1::ProposeCredential(proposal) => {
                 if connection_ids.len() == 1 {
                     self.aries_agent
                         .issuer()
@@ -94,7 +112,7 @@ impl HarnessAgent {
                     ));
                 }
             }
-            CredentialIssuance::RequestCredential(request) => {
+            CredentialIssuanceV1::RequestCredential(request) => {
                 let thread_id = request
                     .decorators
                     .thread
@@ -104,7 +122,7 @@ impl HarnessAgent {
                     .issuer()
                     .process_credential_request(&thread_id, request)?;
             }
-            CredentialIssuance::IssueCredential(credential) => {
+            CredentialIssuanceV1::IssueCredential(credential) => {
                 let thread_id = credential.decorators.thread.thid.clone();
                 self.aries_agent
                     .holder()
@@ -118,15 +136,32 @@ impl HarnessAgent {
         Ok(())
     }
 
+
     async fn handle_presentation_msg(
         &self,
         msg: PresentProof,
         connection_ids: Vec<String>,
         sender_vk: &str,
     ) -> HarnessResult<()> {
+        match msg {
+            PresentProof::V1(msg) => {
+                self.handle_presentation_msg_v1(msg, connection_ids, sender_vk).await
+            }
+            PresentProof::V2(_) => {
+                unimplemented!("V2 issuance is not implemented for aries-vcx aath")
+            }
+        }
+    }
+
+    async fn handle_presentation_msg_v1(
+        &self,
+        msg: PresentProofV1,
+        connection_ids: Vec<String>,
+        sender_vk: &str,
+    ) -> HarnessResult<()> {
         let connection_id = connection_ids.last();
         match msg {
-            PresentProof::RequestPresentation(request) => {
+            PresentProofV1::RequestPresentation(request) => {
                 if connection_ids.len() == 1 {
                     self.aries_agent
                         .prover()
@@ -138,7 +173,7 @@ impl HarnessAgent {
                     ));
                 }
             }
-            PresentProof::Presentation(presentation) => {
+            PresentProofV1::Presentation(presentation) => {
                 let thread_id = presentation.decorators.thread.thid.clone();
                 self.aries_agent
                     .verifier()
@@ -175,10 +210,9 @@ impl HarnessAgent {
                 self.aries_agent.did_exchange().receive_complete(complete)?;
             }
             DidExchange::ProblemReport(problem_report) => {
-                let thread_id = problem_report.decorators.thread.thid.clone();
                 self.aries_agent
                     .did_exchange()
-                    .receive_problem_report(&thread_id, problem_report)?;
+                    .receive_problem_report(problem_report)?;
             }
         };
         Ok(())
@@ -189,8 +223,8 @@ impl HarnessAgent {
         payload: Vec<u8>,
         msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
     ) -> HarnessResult<HttpResponse> {
-        let (message, sender_vk) = EncryptionEnvelope::anon_unpack(
-            &self.aries_agent.profile().inject_wallet(),
+        let (message, sender_vk) = EncryptionEnvelope::anon_unpack_aries_msg(
+            self.aries_agent.wallet(),
             payload.clone(),
         )
         .await?;

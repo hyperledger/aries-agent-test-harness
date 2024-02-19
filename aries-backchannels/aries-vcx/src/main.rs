@@ -23,7 +23,7 @@ use actix_web::{middleware, web, App, HttpServer};
 use clap::Parser;
 
 use aries_vcx_agent::{aries_vcx::messages::AriesMessage, Agent as AriesAgent};
-use controllers::{did_exchange, out_of_band};
+use controllers::out_of_band;
 
 #[derive(Parser)]
 struct Opts {
@@ -46,7 +46,6 @@ enum State {
     Unknown,
     ProposalSent,
     ProposalReceived,
-    OfferSent,
     RequestReceived,
     CredentialSent,
     OfferReceived,
@@ -119,7 +118,6 @@ async fn main() -> std::io::Result<()> {
                     .configure(revocation::config)
                     .configure(presentation::config)
                     .configure(out_of_band::config)
-                    .configure(did_exchange::config)
                     .configure(general::config),
             )
             .service(web::scope("/didcomm").route("", web::post().to(didcomm::receive_message)))
