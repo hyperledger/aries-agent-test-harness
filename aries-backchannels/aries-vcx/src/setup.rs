@@ -101,5 +101,6 @@ pub async fn initialize(port: u32) -> AriesAgent {
         },
         service_endpoint,
     };
+    info!("Initializing with config: {}", init_config);
     AriesAgent::initialize(init_config).await.unwrap()
 }

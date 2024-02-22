@@ -3,10 +3,6 @@ use crate::error::{HarnessError, HarnessErrorType, HarnessResult};
 use crate::soft_assert_eq;
 use crate::{HarnessAgent, State};
 use actix_web::{get, post, web, Responder};
-use aries_vcx_agent::aries_vcx::common::proofs::proof_request::ProofRequestDataBuilder;
-use aries_vcx_agent::aries_vcx::common::proofs::proof_request_internal::{
-    AttrInfo, NonRevokedInterval, PredicateInfo,
-};
 use aries_vcx_agent::aries_vcx::handlers::util::PresentationProposalData;
 use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::present_proof::v1::propose::{
     Predicate, PresentationAttr,
@@ -16,6 +12,7 @@ use aries_vcx_agent::aries_vcx::protocols::proof_presentation::verifier::state_m
 use aries_vcx_agent::aries_vcx::protocols::proof_presentation::verifier::verification_status::PresentationVerificationStatus;
 use std::collections::HashMap;
 use std::sync::RwLock;
+use anoncreds_types::data_types::messages::pres_request::{AttributeInfo, NonRevokedInterval, PredicateInfo, PresentationRequestPayload};
 use aries_vcx_agent::aries_vcx::aries_vcx_core::anoncreds::base_anoncreds::BaseAnonCreds;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -52,7 +49,7 @@ pub struct PresentationProposal {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct ProofRequestData {
-    pub requested_attributes: Option<HashMap<String, AttrInfo>>,
+    pub requested_attributes: Option<HashMap<String, AttributeInfo>>,
     pub requested_predicates: Option<HashMap<String, PredicateInfo>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub non_revoked: Option<NonRevokedInterval>,
@@ -91,25 +88,20 @@ impl HarnessAgent {
             .proof_request
             .data
             .clone();
-        let presentation_request_data = ProofRequestDataBuilder::default()
-            .name("test proof")
+        let nonce = self.aries_agent.anoncreds().generate_nonce().await?;
+        let request = PresentationRequestPayload::builder()
             .requested_attributes(req_data.requested_attributes.unwrap_or_default())
             .requested_predicates(req_data.requested_predicates.unwrap_or_default())
-            .non_revoked(req_data.non_revoked)
-            .nonce(
-                self.aries_agent
-                    .anoncreds()
-                    .generate_nonce()
-                    .await?
-                    .to_string(),
-            )
-            .build()?;
+            .non_revoked(req_data.non_revoked.unwrap()) // todo: not ideal, remove builder's strip_option
+            .nonce(nonce)
+            .name("test proof".to_string())
+            .build();
         let id = self
             .aries_agent
             .verifier()
             .send_proof_request(
                 &presentation_request.connection_id,
-                presentation_request_data,
+                request.into(),
                 None,
             )
             .await?;

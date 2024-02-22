@@ -98,6 +98,7 @@ async fn main() -> std::io::Result<()> {
 
     let aries_agent = setup::initialize(opts.port).await;
 
+    info!("Starting aries back-channel on port {}", opts.port);
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())

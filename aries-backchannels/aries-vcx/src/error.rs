@@ -1,11 +1,6 @@
-use crate::error::aries_vcx::common::primitives::credential_definition::CredentialDefConfigBuilderError;
 use actix_web::{error, http::StatusCode, HttpResponse, HttpResponseBuilder};
-use aries_vcx_agent::aries_vcx::common::proofs::proof_request::ProofRequestDataBuilderError;
 use aries_vcx_agent::aries_vcx::messages::error::MsgTypeError;
-use aries_vcx_agent::aries_vcx::{
-    self, common::primitives::credential_definition::RevocationDetailsBuilderError,
-};
-use aries_vcx_agent::AgentError;
+use aries_vcx_agent::{AgentError, aries_vcx};
 use aries_vcx_agent::aries_vcx::did_parser::ParseError;
 use derive_more::{Display, Error};
 
@@ -128,30 +123,6 @@ impl std::convert::From<reqwest::Error> for HarnessError {
     fn from(rw_err: reqwest::Error) -> HarnessError {
         let kind = HarnessErrorType::InternalServerError;
         let message = format!("Reqwest error: {:?}", rw_err.to_string());
-        HarnessError { message, kind }
-    }
-}
-
-impl std::convert::From<RevocationDetailsBuilderError> for HarnessError {
-    fn from(err: RevocationDetailsBuilderError) -> HarnessError {
-        let kind = HarnessErrorType::InternalServerError;
-        let message = format!("RevocationDetailsBuilderError: {:?}", err.to_string());
-        HarnessError { message, kind }
-    }
-}
-
-impl std::convert::From<CredentialDefConfigBuilderError> for HarnessError {
-    fn from(err: CredentialDefConfigBuilderError) -> HarnessError {
-        let kind = HarnessErrorType::InternalServerError;
-        let message = format!("CredentialDefConfigBuilderError: {:?}", err.to_string());
-        HarnessError { message, kind }
-    }
-}
-
-impl std::convert::From<ProofRequestDataBuilderError> for HarnessError {
-    fn from(err: ProofRequestDataBuilderError) -> HarnessError {
-        let kind = HarnessErrorType::InternalServerError;
-        let message = format!("ProofRequestDataBuilderError: {:?}", err.to_string());
         HarnessError { message, kind }
     }
 }
