@@ -12,6 +12,7 @@ use aries_vcx_agent::aries_vcx::{
 
 use std::sync::RwLock;
 use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::cred_issuance::v1::CredentialIssuanceV1;
+use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::notification::Notification;
 use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::present_proof::v1::PresentProofV1;
 
 impl HarnessAgent {
@@ -181,6 +182,7 @@ impl HarnessAgent {
                     .await?;
             }
             m @ _ => {
+                // todo: use {} display formatter
                 warn!("Received unexpected presentation protocol message: {:?}", m);
             }
         };
@@ -234,9 +236,20 @@ impl HarnessAgent {
                 "Received anoncrypted message",
             )
         })?;
-        info!("Received message: {:?}", message);
+        info!("Received message: {}", message);
         let connection_ids = self.aries_agent.connections().get_by_their_vk(&sender_vk)?;
         match message {
+            AriesMessage::Notification(msg) => {
+                match msg {
+                    Notification::Ack(ack) => {
+                        self.aries_agent.connections().process_ack(ack.clone()).await?;
+                    }
+                    Notification::ProblemReport(err) => {
+                        error!("Received problem report: {:?}", err);
+                        // todo: we should reflect this in the status of connection so aath won't keep polling
+                    }
+                }
+            }
             AriesMessage::Connection(msg) => self.handle_connection_msg(msg).await?,
             AriesMessage::CredentialIssuance(msg) => {
                 self.handle_issuance_msg(msg, connection_ids, &sender_vk)
@@ -248,7 +261,7 @@ impl HarnessAgent {
                     .await?
             }
             m @ _ => {
-                warn!("Received message of unexpected type: {:?}", m);
+                warn!("Received message of unexpected type: {}", m);
             }
         };
         Ok(HttpResponse::Ok().finish())

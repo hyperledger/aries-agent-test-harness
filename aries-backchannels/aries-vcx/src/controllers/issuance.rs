@@ -11,6 +11,7 @@ use aries_vcx_agent::aries_vcx::protocols::issuance::issuer::state_machine::Issu
 use uuid::Uuid;
 use std::sync::RwLock;
 use anoncreds_types::data_types::identifiers::cred_def_id::CredentialDefinitionId;
+use display_as_json::Display;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 struct CredentialPreview(VcxCredentialPreview);
@@ -21,14 +22,14 @@ impl Default for CredentialPreview {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Debug)]
+#[derive(Serialize, Deserialize, Default, Debug, Display)]
 pub struct CredentialOffer {
     cred_def_id: String,
     credential_preview: CredentialPreview,
     connection_id: String,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug, Display)]
 pub struct CredentialProposal {
     schema_issuer_did: String,
     issuer_did: String,
@@ -80,6 +81,10 @@ async fn download_tails_file(
     rev_reg_id: &str,
     tails_hash: &str,
 ) -> HarnessResult<()> {
+    info!(
+        "issuance::download_tails_file >> tails_base_url: {:?}, rev_reg_id: {:?}, tails_hash: {:?}",
+        tails_base_url, rev_reg_id, tails_hash
+    );
     let url = match tails_base_url.to_string().matches('/').count() {
         0 => format!("{}/{}", tails_base_url, rev_reg_id),
         1.. => tails_base_url.to_string(),
@@ -120,6 +125,7 @@ impl HarnessAgent {
         &self,
         cred_proposal: &CredentialProposal,
     ) -> HarnessResult<String> {
+        info!("issuance::send_credential_proposal >>");
         let proposal_id = Uuid::new_v4().to_string();
         let attrs = cred_proposal.credential_proposal.0.attributes.clone();
 
@@ -138,25 +144,29 @@ impl HarnessAgent {
             .holder()
             .send_credential_proposal(&cred_proposal.connection_id, proposal_data)
             .await?;
-        assert_eq!(id, proposal_id); // TODO: Remove once verified
         let state = to_backchannel_state_holder(self.aries_agent.holder().get_state(&id)?);
+        info!("issuance::send_credential_proposal << id: {:?}", id);
+
+        // todo: we are not saving (or creating) the holder
         Ok(json!({ "state": state, "thread_id": id }).to_string())
     }
 
-    pub async fn send_credential_request(&self, id: &str) -> HarnessResult<String> {
+    pub async fn send_credential_request(&self, thread_id: &str) -> HarnessResult<String> {
+        info!("issuance::send_credential_request >> id: {:?}", thread_id);
         self.aries_agent
             .holder()
-            .send_credential_request(Some(id), None)
+            .send_credential_request(thread_id)
             .await?;
-        let state = to_backchannel_state_holder(self.aries_agent.holder().get_state(id)?);
-        Ok(json!({ "state": state, "thread_id": id }).to_string())
+        let state = to_backchannel_state_holder(self.aries_agent.holder().get_state(thread_id)?);
+        Ok(json!({ "state": state, "thread_id": thread_id }).to_string())
     }
 
     pub async fn send_credential_offer(
         &self,
         cred_offer: &CredentialOffer,
-        id: &str,
+        thread_id: &str,
     ) -> HarnessResult<String> {
+        info!("issuance::send_credential_offer >> cred_offer: {}, thread_id: {}", cred_offer, thread_id);
         let get_tails_rev_id =
             |cred_def_id: &str| -> HarnessResult<(Option<String>, Option<String>)> {
                 Ok(
@@ -181,9 +191,10 @@ impl HarnessAgent {
         } else {
             Some(cred_offer.connection_id.as_str())
         };
-        let (offer_info, id) = if id.is_empty() {
+        let (offer_info, id) = if thread_id.is_empty() {
             let credential_preview =
                 serde_json::to_string(&cred_offer.credential_preview.0.attributes)?;
+            info!("issuance::send_credential_offer >> no thread_id provided, this offer initiates new didcomm conversation, using credential_preview: {:?}", credential_preview);
             let (tails_file, rev_reg_id) = get_tails_rev_id(&cred_offer.cred_def_id)?;
             (
                 OfferInfo {
@@ -195,19 +206,21 @@ impl HarnessAgent {
                 None,
             )
         } else {
-            let proposal = self.aries_agent.issuer().get_proposal(id)?;
+            let proposal = self.aries_agent.issuer().get_proposal(thread_id)?;
+            info!("issuance::send_credential_offer >> thread_id is available, this offer will be built based on previous proposal: {:?}", proposal);
             let (tails_file, rev_reg_id) = get_tails_rev_id(&proposal.content.cred_def_id)?;
             (
                 OfferInfo {
-                    credential_json: serde_json::to_string(&proposal.content.credential_proposal)
+                    credential_json: serde_json::to_string(&proposal.content.credential_proposal.attributes)
                         .unwrap(),
                     cred_def_id: CredentialDefinitionId::new(&proposal.content.cred_def_id)? ,
                     rev_reg_id,
                     tails_file,
                 },
-                Some(id),
+                Some(thread_id),
             )
         };
+        info!("issuance::send_credential_offer >> offer_info: {:?}", offer_info);
         let id = self
             .aries_agent
             .issuer()
@@ -222,12 +235,14 @@ impl HarnessAgent {
         id: &str,
         _credential: &Credential,
     ) -> HarnessResult<String> {
+        info!("issuance::issue_credential >> id: {:?}", id);
         self.aries_agent.issuer().send_credential(id).await?;
         let state = to_backchannel_state_issuer(self.aries_agent.issuer().get_state(id)?);
         Ok(json!({ "state": state }).to_string())
     }
 
     pub async fn store_credential(&self, id: &str) -> HarnessResult<String> {
+        info!("issuance::store_credential >> id: {:?}", id);
         let state = self.aries_agent.holder().get_state(id)?;
         if self.aries_agent.holder().is_revokable(id).await? {
             let rev_reg_id = self.aries_agent.holder().get_rev_reg_id(id).await?;
@@ -239,6 +254,7 @@ impl HarnessAgent {
     }
 
     pub async fn get_issuer_state(&self, id: &str) -> HarnessResult<String> {
+        info!("issuance::get_issuer_state >> id: {:?}", id);
         let state = if self.aries_agent.issuer().exists_by_id(id) {
             to_backchannel_state_issuer(self.aries_agent.issuer().get_state(id)?)
         } else if self.aries_agent.holder().exists_by_id(id) {

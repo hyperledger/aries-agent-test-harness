@@ -81,9 +81,9 @@ impl HarnessAgent {
     }
 
     pub async fn process_connection_ack(&self, ack: Ack) -> HarnessResult<String> {
-        let id = ack.decorators.thread.thid.to_string();
-        self.aries_agent.connections().process_ack(&id, ack).await?;
-        Ok(json!({ "connection_id": id }).to_string())
+        let thid = ack.decorators.thread.thid.to_string();
+        self.aries_agent.connections().process_ack(ack).await?;
+        Ok(json!({ "connection_id": thid }).to_string())
     }
 
     pub async fn get_connection_state(&self, id: &str) -> HarnessResult<String> {
@@ -147,11 +147,13 @@ pub async fn get_connection_state(
     agent: web::Data<RwLock<HarnessAgent>>,
     path: web::Path<String>,
 ) -> impl Responder {
-    agent
+    let connection_state = agent
         .read()
         .unwrap()
         .get_connection_state(&path.into_inner())
-        .await
+        .await;
+    info!("Connection state: {:?}", connection_state);
+    connection_state
 }
 
 #[get("/{thread_id}")]

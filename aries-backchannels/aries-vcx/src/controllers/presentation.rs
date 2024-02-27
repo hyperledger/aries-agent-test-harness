@@ -92,7 +92,7 @@ impl HarnessAgent {
         let request = PresentationRequestPayload::builder()
             .requested_attributes(req_data.requested_attributes.unwrap_or_default())
             .requested_predicates(req_data.requested_predicates.unwrap_or_default())
-            .non_revoked(req_data.non_revoked.unwrap()) // todo: not ideal, remove builder's strip_option
+            .non_revoked(req_data.non_revoked)
             .nonce(nonce)
             .name("test proof".to_string())
             .build();
