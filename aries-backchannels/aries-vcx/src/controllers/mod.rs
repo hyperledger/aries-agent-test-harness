@@ -9,6 +9,7 @@ pub mod out_of_band;
 pub mod presentation;
 pub mod revocation;
 pub mod schema;
+pub mod did_exchange;
 
 #[derive(Deserialize)]
 pub struct Request<T> {
