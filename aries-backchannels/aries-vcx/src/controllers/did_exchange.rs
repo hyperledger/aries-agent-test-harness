@@ -1,13 +1,14 @@
 use std::sync::RwLock;
 
 use actix_web::{get, post, web, Responder};
-use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::did_exchange::request::Request as OobRequest;
+use aries_vcx_agent::aries_vcx::did_parser::Did;
 use aries_vcx_agent::aries_vcx::messages::msg_fields::protocols::did_exchange::DidExchange;
 use aries_vcx_agent::aries_vcx::messages::AriesMessage;
+use aries_vcx_agent::aries_vcx::protocols::did_exchange::state_machine::requester::helpers::invitation_get_first_did_service;
 
 use crate::controllers::Request;
 use crate::error::{HarnessError, HarnessErrorType, HarnessResult};
-use crate::{soft_assert_eq, HarnessAgent};
+use crate::HarnessAgent;
 
 #[derive(Deserialize)]
 #[allow(dead_code)]
@@ -16,71 +17,75 @@ pub struct CreateResolvableDidRequest {
     their_did: String,
 }
 
-// This is so convoluted because of inaccurate data model
-fn pthid_from_request(request: &OobRequest) -> HarnessResult<String> {
-    request
-        .decorators
-        .thread
-        .clone()
-        .ok_or_else(|| {
-            HarnessError::from_msg(
-                HarnessErrorType::InvalidState,
-                "Request does not contain a thread decorator",
-            )
-        })?
-        .pthid
-        .ok_or_else(|| {
-            HarnessError::from_msg(
-                HarnessErrorType::InvalidState,
-                "Request does not contain a pthid",
-            )
-        })
-}
-
 impl HarnessAgent {
-    pub async fn send_did_exchange_request(&self, invitation_id: &str) -> HarnessResult<String> {
+    pub async fn didx_requester_send_request(&self, invitation_id: String) -> HarnessResult<String> {
         let invitation = self
             .aries_agent
             .out_of_band()
-            .get_invitation(invitation_id)?;
-        let id = self
+            .get_invitation(&invitation_id)?;
+        let did_inviter: Did = invitation_get_first_did_service(&invitation)?;
+        let (thid, pthid) = self
             .aries_agent
             .did_exchange()
-            .send_request_pairwise(invitation)
+            .send_request(did_inviter.to_string(), Some(invitation_id))
             .await?;
-        Ok(json!({ "connection_id": id }).to_string())
+        if let Some(ref pthid) = pthid {
+            self.store_mapping_pthid_thid(pthid.clone(), thid.clone());
+        } else {
+            warn!("didx_requester_send_request >> No storing pthid->this mapping; no pthid available");
+        }
+        let connection_id = pthid.unwrap_or(thid);
+        Ok(json!({ "connection_id" : connection_id }).to_string())
     }
 
-    pub async fn send_did_exchange_request_resolvable_did(
+    pub async fn store_didcomm_message(&self, msg: AriesMessage) -> HarnessResult<String> {
+        let mut msg_buffer = self.didx_msg_buffer.write().or_else(|_| {
+            Err(HarnessError::from_msg(
+                HarnessErrorType::InvalidState,
+                "Failed to lock message buffer",
+            ))
+        })?;
+        msg_buffer.push(msg);
+        Ok(json!({ "status": "ok" }).to_string())
+    }
+
+    // Note: used by test-case did-exchange @T005-RFC0023
+    pub async fn didx_requester_send_request_from_resolvable_did(
         &self,
         req: &CreateResolvableDidRequest,
     ) -> HarnessResult<String> {
-        let id = self
+        let (thid, pthid) = self
             .aries_agent
             .did_exchange()
-            .send_request_public(req.their_did.clone())
+            .send_request(req.their_public_did.clone(), None)
             .await?;
-        Ok(json!({ "connection_id": id }).to_string())
+        let connection_id = pthid.unwrap_or(thid);
+        Ok(json!({ "connection_id": connection_id }).to_string())
     }
 
-    pub async fn receive_did_exchange_request_resolvable_did(
-        &self,
-        msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
-    ) -> HarnessResult<String> {
+    // While in real-life setting, requester would send the request to a service resolved from DID Document
+    // AATH play role of "mediator" such that it explicitly takes request from requester and passes
+    // it to responder (eg. this method)
+    pub async fn didx_responder_receive_request_from_resolvable_did(&self) -> HarnessResult<String> {
         let request = {
-            let mut request_guard = msg_buffer.write().or_else(|_| {
+            debug!("receive_did_exchange_request_resolvable_did >>");
+            let request_guard = self.didx_msg_buffer.write().or_else(|_| {
                 Err(HarnessError::from_msg(
                     HarnessErrorType::InvalidState,
                     "Failed to lock message buffer",
                 ))
             })?;
-            request_guard.pop().ok_or_else(|| {
-                HarnessError::from_msg(HarnessErrorType::InvalidState, "No message found")
-            })?
+            let msgs = request_guard.len();
+            debug!("receive_did_exchange_request_resolvable_did >> msgs: {}", msgs);
+            let foo = request_guard.get(0);
+            debug!("receive_did_exchange_request_resolvable_did >> foo: {:?}", foo);
+            foo.ok_or_else(|| {
+                HarnessError::from_msg(HarnessErrorType::InvalidState, "receive_did_exchange_request_resolvable_did >> Expected to find DidExchange request message in buffer, found nothing.")
+            })?.clone()
         };
-        if let AriesMessage::DidExchange(DidExchange::Request(request)) = request {
-            let request_pthid = pthid_from_request(&request)?;
-            Ok(json!({ "connection_id": request_pthid }).to_string())
+        if let AriesMessage::DidExchange(DidExchange::Request(ref request)) = request {
+            let thid = request.decorators.thread.clone().unwrap().thid;
+            Ok(json!({ "connection_id": thid }).to_string())
         } else {
             Err(HarnessError::from_msg(
                 HarnessErrorType::InvalidState,
@@ -89,41 +94,57 @@ impl HarnessAgent {
         }
     }
 
-    pub async fn send_did_exchange_response(
-        &self,
-        msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
-    ) -> HarnessResult<String> {
+    // Note: AVF identifies protocols by thid, but AATH sometimes tracks identifies did-exchange
+    //       connection using pthread_id instead (if one exists; eg. connection was bootstrapped from invitation)
+    //       That's why we need pthid -> thid translation on AATH layer.
+    fn store_mapping_pthid_thid(&self, pthid: String, thid: String) {
+        warn!("Storing pthid -> thid mapping: {} -> {}", pthid, thid.clone());
+        self.didx_pthid_to_thid
+            .lock()
+            .unwrap()
+            .insert(pthid, thid.clone());
+    }
+
+    pub async fn didx_responder_send_did_exchange_response(&self) -> HarnessResult<String> {
         let request = {
-            let mut request_guard = msg_buffer.write().or_else(|_| {
+            let mut request_guard = self.didx_msg_buffer.write().or_else(|_| {
                 Err(HarnessError::from_msg(
                     HarnessErrorType::InvalidState,
                     "Failed to lock message buffer",
                 ))
             })?;
             request_guard.pop().ok_or_else(|| {
-                HarnessError::from_msg(HarnessErrorType::InvalidState, "No message found")
+                HarnessError::from_msg(HarnessErrorType::InvalidState, "send_did_exchange_response >> Expected to find DidExchange request message in buffer, found nothing.")
             })?
         };
         if let AriesMessage::DidExchange(DidExchange::Request(request)) = request {
-            let request_pthid = pthid_from_request(&request)?;
-            if !request_pthid.starts_with("did:sov:") // i.e. not implicit invitation
-                && !self.aries_agent.out_of_band().exists_by_id(&request_pthid)
-            {
-                return Err(HarnessError::from_msg(
-                    HarnessErrorType::ProtocolError,
-                    &format!("No invitation found with id {request_pthid}"),
-                ));
-            }
-            let invitation = self
-                .aries_agent
-                .out_of_band()
-                .get_invitation(&request_pthid)?;
-            let id = self
+            let opt_invitation = match request.decorators.thread.clone().unwrap().pthid {
+                None => None,
+                Some(pthid) => {
+                    let invitation = self
+                        .aries_agent
+                        .out_of_band()
+                        .get_invitation(&pthid)?;
+                    Some(invitation)
+                }
+            };
+            let (thid, pthid) = self
                 .aries_agent
                 .did_exchange()
-                .send_response(request.clone().into(), invitation)
+                .process_request(request.clone().into(), opt_invitation)
                 .await?;
-            Ok(json!({ "connection_id": id }).to_string())
+
+            if let Some(pthid) = pthid {
+                self.store_mapping_pthid_thid(pthid, thid.clone());
+            } else {
+                warn!("No storing pthid->this mapping; no pthid available");
+            }
+
+            self.aries_agent
+                .did_exchange()
+                .send_response(thid.clone())
+                .await?;
+            Ok(json!({ "connection_id": thid }).to_string())
         } else {
             Err(HarnessError::from_msg(
                 HarnessErrorType::InvalidState,
@@ -132,14 +153,26 @@ impl HarnessAgent {
         }
     }
 
-    pub async fn get_did_exchange_state(&self, id: &str) -> HarnessResult<String> {
-        let state = self.aries_agent.did_exchange().get_state(id)?;
+    pub async fn didx_get_state(&self, connection_id: &str) -> HarnessResult<String> {
+        let thid = match self.didx_pthid_to_thid.lock().unwrap().get(connection_id) {
+            Some(thid) => {
+                debug!("didx_get_state >> connection_id {} (pthid) was mapped to {} (thid)", connection_id, thid);
+                thid.clone() // connection_id was in fact pthread_id, mapping pthid -> thid exists
+            }
+            None => {
+                connection_id.to_string() // connection_id was thid already, no mapping exists
+            }
+        };
+        let state = self.aries_agent.did_exchange().get_state(&thid)?;
         Ok(json!({ "state": state }).to_string())
     }
 
-    pub async fn get_invitation_id(&self, id: &str) -> HarnessResult<String> {
-        let invitation_id = self.aries_agent.did_exchange().invitation_id(id)?;
-        Ok(json!({ "connection_id": invitation_id }).to_string())
+    pub async fn didx_get_invitation_id(&self, connection_id: &str) -> HarnessResult<String> {
+        // note: old implementation:
+        // let invitation_id = self.aries_agent.did_exchange().invitation_id(id)?;
+
+        // note: thread_id is handle for our protocol on harness level, no need to resolve anything
+        Ok(json!({ "connection_id": connection_id }).to_string())
     }
 }
 
@@ -151,7 +184,7 @@ async fn send_did_exchange_request(
     agent
         .read()
         .unwrap()
-        .send_did_exchange_request(&req.id)
+        .didx_requester_send_request(req.id.clone())
         .await
 }
 
@@ -163,7 +196,7 @@ async fn send_did_exchange_request_resolvable_did(
     agent
         .read()
         .unwrap()
-        .send_did_exchange_request_resolvable_did(req.data.as_ref().ok_or(
+        .didx_requester_send_request_from_resolvable_did(req.data.as_ref().ok_or(
             HarnessError::from_msg(
                 HarnessErrorType::InvalidJson,
                 "Failed to deserialize pairwise invitation",
@@ -172,29 +205,29 @@ async fn send_did_exchange_request_resolvable_did(
         .await
 }
 
-// TODO: Here we receive the outpout of create-request-resolvable-did
+// Note: AATH expects us to identify connection-request we should have received prior to this call
+//       and assign connection_id to that communication (returned from this function)
 #[post("/receive-request-resolvable-did")]
 async fn receive_did_exchange_request_resolvable_did(
     agent: web::Data<RwLock<HarnessAgent>>,
-    msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
+    _msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
 ) -> impl Responder {
     agent
         .read()
         .unwrap()
-        .receive_did_exchange_request_resolvable_did(msg_buffer)
+        .didx_responder_receive_request_from_resolvable_did()
         .await
 }
 
 #[post("/send-response")]
 async fn send_did_exchange_response(
-    req: web::Json<Request<()>>,
+    _req: web::Json<Request<()>>,
     agent: web::Data<RwLock<HarnessAgent>>,
-    msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
 ) -> impl Responder {
     agent
         .read()
         .unwrap()
-        .send_did_exchange_response(msg_buffer)
+        .didx_responder_send_did_exchange_response()
         .await
 }
 
@@ -206,7 +239,7 @@ async fn get_invitation_id(
     agent
         .read()
         .unwrap()
-        .get_invitation_id(&path.into_inner())
+        .didx_get_invitation_id(&path.into_inner())
         .await
 }
 
@@ -218,7 +251,7 @@ pub async fn get_did_exchange_state(
     agent
         .read()
         .unwrap()
-        .get_did_exchange_state(&path.into_inner())
+        .didx_get_state(&path.into_inner())
         .await
 }
 

@@ -191,12 +191,12 @@ impl HarnessAgent {
 
     async fn handle_did_exchange_msg(
         &self,
-        msg: DidExchange,
-        msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
+        msg: DidExchange
     ) -> HarnessResult<()> {
         match msg {
             DidExchange::Request(request) => {
-                msg_buffer.write().unwrap().push(request.into());
+                // self.aries_agent.receive_message(request.into());
+                self.didx_msg_buffer.write().unwrap().push(request.into());
             }
             DidExchange::Response(response) => {
                 let res = self
@@ -222,8 +222,7 @@ impl HarnessAgent {
 
     pub async fn receive_message(
         &self,
-        payload: Vec<u8>,
-        msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
+        payload: Vec<u8>
     ) -> HarnessResult<HttpResponse> {
         let (message, sender_vk) = EncryptionEnvelope::anon_unpack_aries_msg(
             self.aries_agent.wallet(),
@@ -255,7 +254,7 @@ impl HarnessAgent {
                 self.handle_issuance_msg(msg, connection_ids, &sender_vk)
                     .await?
             }
-            AriesMessage::DidExchange(msg) => self.handle_did_exchange_msg(msg, msg_buffer).await?,
+            AriesMessage::DidExchange(msg) => self.handle_did_exchange_msg(msg).await?,
             AriesMessage::PresentProof(msg) => {
                 self.handle_presentation_msg(msg, connection_ids, &sender_vk)
                     .await?
@@ -271,11 +270,11 @@ impl HarnessAgent {
 pub async fn receive_message(
     req: web::Bytes,
     agent: web::Data<RwLock<HarnessAgent>>,
-    msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
+    _msg_buffer: web::Data<RwLock<Vec<AriesMessage>>>,
 ) -> impl Responder {
     agent
         .read()
         .unwrap()
-        .receive_message(req.to_vec(), msg_buffer)
+        .receive_message(req.to_vec())
         .await
 }

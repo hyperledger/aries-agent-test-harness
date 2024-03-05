@@ -14,11 +14,10 @@ extern crate clap;
 extern crate reqwest;
 extern crate uuid;
 
-use std::sync::RwLock;
+use std::collections::HashMap;
+use std::sync::{Mutex, RwLock};
 
-use crate::controllers::{
-    connection, credential_definition, didcomm, general, issuance, presentation, revocation, schema,
-};
+use crate::controllers::{connection, credential_definition, did_exchange, didcomm, general, issuance, presentation, revocation, schema};
 use actix_web::{middleware, web, App, HttpServer};
 use clap::Parser;
 
@@ -60,10 +59,13 @@ enum Status {
     Active,
 }
 
-#[derive(Clone)]
 pub struct HarnessAgent {
     aries_agent: AriesAgent,
     status: Status,
+    // did-exchange specific
+    // todo: extra didx specific AATH service
+    didx_msg_buffer: RwLock<Vec<AriesMessage>>,
+    didx_pthid_to_thid: Mutex<HashMap<String, String>>,
 }
 
 #[macro_export]
@@ -108,11 +110,14 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(RwLock::new(HarnessAgent {
                 aries_agent: aries_agent.clone(),
                 status: Status::Active,
+                didx_msg_buffer: Default::default(),
+                didx_pthid_to_thid: Mutex::new(Default::default()),
             })))
             .app_data(web::Data::new(RwLock::new(Vec::<AriesMessage>::new())))
             .service(
                 web::scope("/agent")
                     .configure(connection::config)
+                    .configure(did_exchange::config)
                     .configure(schema::config)
                     .configure(credential_definition::config)
                     .configure(issuance::config)

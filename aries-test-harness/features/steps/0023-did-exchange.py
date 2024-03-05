@@ -404,6 +404,7 @@ def step_impl(context, requester):
     requester_connection_id = context.connection_id_dict[requester][
         context.responder_name
     ]
+    print("In the step '{requester} receives the response'; requester_connection_id: ", requester_connection_id)
 
     requester_url: str = context.config.userdata.get(requester)
 
