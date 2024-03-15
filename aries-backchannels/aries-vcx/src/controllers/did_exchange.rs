@@ -69,17 +69,13 @@ impl HarnessAgent {
     pub async fn didx_responder_receive_request_from_resolvable_did(&self) -> HarnessResult<String> {
         let request = {
             debug!("receive_did_exchange_request_resolvable_did >>");
-            let request_guard = self.didx_msg_buffer.write().or_else(|_| {
+            let msgs = self.didx_msg_buffer.write().or_else(|_| {
                 Err(HarnessError::from_msg(
                     HarnessErrorType::InvalidState,
                     "Failed to lock message buffer",
                 ))
             })?;
-            let msgs = request_guard.len();
-            debug!("receive_did_exchange_request_resolvable_did >> msgs: {}", msgs);
-            let foo = request_guard.get(0);
-            debug!("receive_did_exchange_request_resolvable_did >> foo: {:?}", foo);
-            foo.ok_or_else(|| {
+            msgs.first().ok_or_else(|| {
                 HarnessError::from_msg(HarnessErrorType::InvalidState, "receive_did_exchange_request_resolvable_did >> Expected to find DidExchange request message in buffer, found nothing.")
             })?.clone()
         };
@@ -98,7 +94,7 @@ impl HarnessAgent {
     //       connection using pthread_id instead (if one exists; eg. connection was bootstrapped from invitation)
     //       That's why we need pthid -> thid translation on AATH layer.
     fn store_mapping_pthid_thid(&self, pthid: String, thid: String) {
-        warn!("Storing pthid -> thid mapping: {} -> {}", pthid, thid.clone());
+        info!("store_mapping_pthid_thid >> pthid: {}, thid: {}", pthid, thid);
         self.didx_pthid_to_thid
             .lock()
             .unwrap()
