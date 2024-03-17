@@ -32,7 +32,7 @@ impl HarnessAgent {
                     .create_schema(
                         &schema.schema_name,
                         &schema.schema_version,
-                        &schema.attributes,
+                        schema.attributes.clone(),
                     )
                     .await?,
                 id);

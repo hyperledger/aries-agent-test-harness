@@ -14,22 +14,16 @@ extern crate clap;
 extern crate reqwest;
 extern crate uuid;
 
-use std::sync::RwLock;
+use std::collections::HashMap;
+use std::sync::{Mutex, RwLock};
 
-use crate::controllers::{
-    connection,
-    credential_definition,
-    general,
-    issuance,
-    presentation,
-    revocation,
-    schema,
-    didcomm
-};
+use crate::controllers::{connection, credential_definition, did_exchange, didcomm, general, issuance, presentation, revocation, schema};
 use actix_web::{middleware, web, App, HttpServer};
 use clap::Parser;
 
-use aries_vcx_agent::Agent as AriesAgent;
+use aries_vcx_agent::{aries_vcx::messages::AriesMessage, Agent as AriesAgent};
+use aries_vcx_agent::aries_vcx::aries_vcx_core::wallet::indy::IndySdkWallet;
+use controllers::out_of_band;
 
 #[derive(Parser)]
 struct Opts {
@@ -52,7 +46,6 @@ enum State {
     Unknown,
     ProposalSent,
     ProposalReceived,
-    OfferSent,
     RequestReceived,
     CredentialSent,
     OfferReceived,
@@ -67,10 +60,13 @@ enum Status {
     Active,
 }
 
-#[derive(Clone)]
 pub struct HarnessAgent {
-    aries_agent: AriesAgent,
+    aries_agent: AriesAgent<IndySdkWallet>,
     status: Status,
+    // did-exchange specific
+    // todo: extra didx specific AATH service
+    didx_msg_buffer: RwLock<Vec<AriesMessage>>,
+    didx_pthid_to_thid: Mutex<HashMap<String, String>>,
 }
 
 #[macro_export]
@@ -96,13 +92,16 @@ macro_rules! soft_assert_eq {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"));
+    env_logger::init_from_env(
+        env_logger::Env::default().filter_or(env_logger::DEFAULT_FILTER_ENV, "info"),
+    );
     let opts: Opts = Opts::parse();
 
     let host = std::env::var("HOST").unwrap_or("0.0.0.0".to_string());
 
     let aries_agent = setup::initialize(opts.port).await;
 
+    info!("Starting aries back-channel on port {}", opts.port);
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
@@ -112,24 +111,27 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(RwLock::new(HarnessAgent {
                 aries_agent: aries_agent.clone(),
                 status: Status::Active,
+                didx_msg_buffer: Default::default(),
+                didx_pthid_to_thid: Mutex::new(Default::default()),
             })))
+            .app_data(web::Data::new(RwLock::new(Vec::<AriesMessage>::new())))
             .service(
                 web::scope("/agent")
                     .configure(connection::config)
+                    .configure(did_exchange::config)
                     .configure(schema::config)
                     .configure(credential_definition::config)
                     .configure(issuance::config)
                     .configure(revocation::config)
                     .configure(presentation::config)
-                    .configure(general::config)
+                    .configure(out_of_band::config)
+                    .configure(general::config),
             )
-            .service(
-                web::scope("/didcomm").route("", web::post().to(didcomm::receive_message))
-            )
+            .service(web::scope("/didcomm").route("", web::post().to(didcomm::receive_message)))
     })
     .keep_alive(std::time::Duration::from_secs(30))
     .client_request_timeout(std::time::Duration::from_secs(30))
-    .workers(2)
+    .workers(1)
     .bind(format!("{}:{}", host, opts.port))?
     .run()
     .await

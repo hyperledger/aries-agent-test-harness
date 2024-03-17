@@ -9,7 +9,8 @@ impl HarnessAgent {
     }
 
     pub fn get_public_did(&self) -> HarnessResult<String> {
-        Ok(json!({ "did": self.aries_agent.issuer_did() }).to_string())
+        let public_did = self.aries_agent.public_did();
+        Ok(json!({ "did": format!("did:sov:{public_did}") }).to_string())
     }
 }
 

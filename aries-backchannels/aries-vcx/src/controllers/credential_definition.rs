@@ -1,9 +1,11 @@
 use actix_web::{get, post, web, Responder};
 use reqwest::multipart;
 use std::sync::RwLock;
+use anoncreds_types::data_types::identifiers::cred_def_id::CredentialDefinitionId;
 
 use crate::error::{HarnessError, HarnessErrorType, HarnessResult};
-use aries_vcx_agent::aries_vcx::common::primitives::credential_definition::CredentialDefConfigBuilder;
+use aries_vcx_agent::aries_vcx::did_parser::Did;
+use anoncreds_types::data_types::identifiers::schema_id::SchemaId;
 
 use crate::controllers::Request;
 use crate::soft_assert_eq;
@@ -55,12 +57,11 @@ impl HarnessAgent {
             .cred_defs()
             .find_by_schema_id(&cred_def.schema_id)?;
         let cred_def_id = if cred_def_ids.is_empty() {
-            let config = CredentialDefConfigBuilder::default()
-                .issuer_did(&self.aries_agent.issuer_did())
-                .schema_id(&cred_def.schema_id)
-                .tag(&cred_def.tag)
-                .build()?;
-            let cred_def_id = self.aries_agent.cred_defs().create_cred_def(config).await?;
+            let cred_def_id = self.aries_agent.cred_defs().create_cred_def(
+                Did::parse(self.aries_agent.issuer_did())?,
+                SchemaId::new(&cred_def.schema_id)?,
+                cred_def.tag.clone(),
+            ).await?;
             self.aries_agent
                 .cred_defs()
                 .publish_cred_def(&cred_def_id)
@@ -70,7 +71,7 @@ impl HarnessAgent {
                 let rev_reg_id = self
                     .aries_agent
                     .rev_regs()
-                    .create_rev_reg(&cred_def_id, 50)
+                    .create_rev_reg(&CredentialDefinitionId::new(cred_def_id.clone())?, 50)
                     .await?;
                 let tails_url = format!("{}/{}", tails_base_url, rev_reg_id);
                 self.aries_agent
