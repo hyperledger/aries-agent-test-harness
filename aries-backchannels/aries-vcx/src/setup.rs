@@ -1,6 +1,11 @@
-use aries_vcx_agent::{Agent as AriesAgent, InitConfig, PoolInitConfig, WalletInitConfig};
+use std::{io::prelude::*, sync::Arc};
+
+use aries_vcx_agent::{
+    aries_vcx::aries_vcx_wallet::wallet::indy::IndySdkWallet, build_indy_wallet,
+    Agent as AriesAgent, WalletInitConfig,
+};
 use rand::{thread_rng, Rng};
-use std::io::prelude::*;
+use reqwest::Url;
 
 #[derive(Debug, Deserialize)]
 struct SeedResponse {
@@ -60,6 +65,7 @@ async fn download_genesis_file() -> std::result::Result<String, String> {
                 let mut f = std::fs::OpenOptions::new()
                     .write(true)
                     .create(true)
+                    .truncate(true)
                     .open(path.clone())
                     .expect("Unable to open file");
                 f.write_all(body.as_bytes()).expect("Unable to write data");
@@ -79,26 +85,37 @@ async fn download_genesis_file() -> std::result::Result<String, String> {
     }
 }
 
-pub async fn initialize(port: u32) -> AriesAgent {
-    let enterprise_seed = get_trustee_seed().await;
+pub async fn initialize(port: u32) -> AriesAgent<IndySdkWallet> {
+    let trustee_submitter_seed = get_trustee_seed().await;
     let genesis_path = download_genesis_file()
         .await
         .expect("Failed to download the genesis file");
     let dockerhost = std::env::var("DOCKERHOST").unwrap_or("localhost".to_string());
-    let service_endpoint = format!("http://{}:{}/didcomm", dockerhost, port);
-    let init_config = InitConfig {
-        enterprise_seed,
-        pool_config: PoolInitConfig {
-            genesis_path,
-            pool_name: "pool_name".to_string(),
-        },
-        wallet_config: WalletInitConfig {
-            wallet_name: format!("rust_agent_{}", uuid::Uuid::new_v4()),
-            wallet_key: "8dvfYSt5d1taSd6yJdpjq4emkwsPDDLYxkNFysFD2cZY".to_string(),
-            wallet_kdf: "RAW".to_string(),
-        },
-        agency_config: None,
-        service_endpoint
+    let service_endpoint = Url::parse(&format!("http://{}:{}/didcomm", dockerhost, port)).unwrap();
+
+    let wallet_config = WalletInitConfig {
+        wallet_name: format!("rust_agent_{}", uuid::Uuid::new_v4()),
+        wallet_key: "8dvfYSt5d1taSd6yJdpjq4emkwsPDDLYxkNFysFD2cZY".to_string(),
+        wallet_kdf: "RAW".to_string(),
     };
-    AriesAgent::initialize(init_config).await.unwrap()
+    let (wallet, trustee_config) = build_indy_wallet(wallet_config, trustee_submitter_seed).await;
+    let wallet = Arc::new(wallet);
+
+    let issuer_did = AriesAgent::setup_ledger(
+        genesis_path.clone(),
+        wallet.clone(),
+        service_endpoint.clone(),
+        trustee_config.institution_did.parse().unwrap(),
+    )
+    .await
+    .unwrap();
+
+    AriesAgent::initialize(
+        genesis_path,
+        wallet.clone(),
+        service_endpoint.clone(),
+        issuer_did,
+    )
+    .await
+    .unwrap()
 }

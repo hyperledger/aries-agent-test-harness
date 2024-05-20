@@ -1,20 +1,26 @@
-use crate::controllers::Request;
-use crate::error::{HarnessError, HarnessErrorType, HarnessResult};
-use crate::soft_assert_eq;
-use crate::{HarnessAgent, State};
+use std::{collections::HashMap, sync::RwLock};
+
 use actix_web::{get, post, web, Responder};
-use aries_vcx_agent::aries_vcx::common::proofs::proof_request::ProofRequestDataBuilder;
-use aries_vcx_agent::aries_vcx::common::proofs::proof_request_internal::{
-    AttrInfo, NonRevokedInterval, PredicateInfo,
+use anoncreds_types::data_types::messages::pres_request::{
+    AttributeInfo, NonRevokedInterval, PredicateInfo, PresentationRequestPayload,
 };
-use aries_vcx_agent::aries_vcx::messages::protocols::proof_presentation::presentation_proposal::{
-    Attribute, Predicate, PresentationProposalData,
+use aries_vcx_agent::aries_vcx::{
+    aries_vcx_core::anoncreds::base_anoncreds::BaseAnonCreds,
+    handlers::util::PresentationProposalData,
+    messages::msg_fields::protocols::present_proof::v1::propose::{Predicate, PresentationAttr},
+    protocols::proof_presentation::{
+        prover::state_machine::ProverState,
+        verifier::{
+            state_machine::VerifierState, verification_status::PresentationVerificationStatus,
+        },
+    },
 };
-use aries_vcx_agent::aries_vcx::messages::status::Status;
-use aries_vcx_agent::aries_vcx::protocols::proof_presentation::prover::state_machine::ProverState;
-use aries_vcx_agent::aries_vcx::protocols::proof_presentation::verifier::state_machine::VerifierState;
-use std::collections::HashMap;
-use std::sync::RwLock;
+
+use crate::{
+    controllers::AathRequest,
+    error::{HarnessError, HarnessErrorType, HarnessResult},
+    soft_assert_eq, HarnessAgent, State,
+};
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct PresentationRequestWrapper {
@@ -44,13 +50,13 @@ pub struct ProofRequestDataWrapper {
 #[derive(Serialize, Deserialize, Default, Debug)]
 pub struct PresentationProposal {
     comment: String,
-    attributes: Vec<Attribute>,
+    attributes: Vec<PresentationAttr>,
     predicates: Vec<Predicate>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct ProofRequestData {
-    pub requested_attributes: Option<HashMap<String, AttrInfo>>,
+    pub requested_attributes: Option<HashMap<String, AttributeInfo>>,
     pub requested_predicates: Option<HashMap<String, PredicateInfo>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub non_revoked: Option<NonRevokedInterval>,
@@ -89,27 +95,18 @@ impl HarnessAgent {
             .proof_request
             .data
             .clone();
-        let presentation_request_data = ProofRequestDataBuilder::default()
-            .name("test proof")
+        let nonce = self.aries_agent.anoncreds().generate_nonce().await?;
+        let request = PresentationRequestPayload::builder()
             .requested_attributes(req_data.requested_attributes.unwrap_or_default())
             .requested_predicates(req_data.requested_predicates.unwrap_or_default())
             .non_revoked(req_data.non_revoked)
-            .nonce(
-                self.aries_agent
-                    .profile()
-                    .inject_anoncreds()
-                    .generate_nonce()
-                    .await?,
-            )
-            .build()?;
+            .nonce(nonce)
+            .name("test proof".to_string())
+            .build();
         let id = self
             .aries_agent
             .verifier()
-            .send_proof_request(
-                &presentation_request.connection_id,
-                presentation_request_data,
-                None,
-            )
+            .send_proof_request(&presentation_request.connection_id, request.into(), None)
             .await?;
         let state = self.aries_agent.verifier().get_state(&id)?;
         Ok(json!({ "state": to_backchannel_state_verifier(state), "thread_id": id }).to_string())
@@ -119,14 +116,14 @@ impl HarnessAgent {
         &self,
         presentation_proposal: &PresentationProposalWrapper,
     ) -> HarnessResult<String> {
-        let mut proposal_data = PresentationProposalData::create();
+        let mut proposal_data = PresentationProposalData::default();
         for attr in presentation_proposal
             .presentation_proposal
             .attributes
             .clone()
             .into_iter()
         {
-            proposal_data = proposal_data.add_attribute(attr.clone());
+            proposal_data.attributes.push(attr.clone());
         }
         let id = self
             .aries_agent
@@ -162,7 +159,8 @@ impl HarnessAgent {
     }
 
     pub async fn verify_presentation(&self, id: &str) -> HarnessResult<String> {
-        let verified = self.aries_agent.verifier().get_presentation_status(id)? == Status::Success;
+        let verified = self.aries_agent.verifier().get_presentation_status(id)?
+            == PresentationVerificationStatus::Valid;
         let state = self.aries_agent.verifier().get_state(id)?;
         Ok(
             json!({ "state": to_backchannel_state_verifier(state), "verified": verified })
@@ -184,7 +182,7 @@ impl HarnessAgent {
 
 #[post("/send-request")]
 pub async fn send_proof_request(
-    req: web::Json<Request<PresentationRequestWrapper>>,
+    req: web::Json<AathRequest<PresentationRequestWrapper>>,
     agent: web::Data<RwLock<HarnessAgent>>,
 ) -> impl Responder {
     agent.read().unwrap().send_proof_request(&req.data).await
@@ -192,7 +190,7 @@ pub async fn send_proof_request(
 
 #[post("/send-proposal")]
 pub async fn send_proof_proposal(
-    req: web::Json<Request<PresentationProposalWrapper>>,
+    req: web::Json<AathRequest<PresentationProposalWrapper>>,
     agent: web::Data<RwLock<HarnessAgent>>,
 ) -> impl Responder {
     agent.read().unwrap().send_proof_proposal(&req.data).await
@@ -200,7 +198,7 @@ pub async fn send_proof_proposal(
 
 #[post("/send-presentation")]
 pub async fn send_presentation(
-    req: web::Json<Request<serde_json::Value>>,
+    req: web::Json<AathRequest<serde_json::Value>>,
     agent: web::Data<RwLock<HarnessAgent>>,
 ) -> impl Responder {
     agent.read().unwrap().send_presentation(&req.id).await
@@ -208,7 +206,7 @@ pub async fn send_presentation(
 
 #[post("/verify-presentation")]
 pub async fn verify_presentation(
-    req: web::Json<Request<serde_json::Value>>,
+    req: web::Json<AathRequest<serde_json::Value>>,
     agent: web::Data<RwLock<HarnessAgent>>,
 ) -> impl Responder {
     agent.read().unwrap().verify_presentation(&req.id).await

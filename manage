@@ -20,6 +20,7 @@ export REDIS_CLUSTER_URL_CONFIG="${REDIS_CLUSTER_URL_CONFIG}"
 export AGENT_CONFIG_FILE="${AGENT_CONFIG_FILE}"
 export GENESIS_URL="${GENESIS_URL}"
 export GENESIS_FILE="${GENESIS_FILE}"
+export DOCKER_DEFAULT_PLATFORM=linux/amd64
 
 # these are derived from the above two
 LEDGER_URL_HOST="${LEDGER_URL_CONFIG:-http://localhost:9000}"

@@ -140,9 +140,9 @@ def expected_agent_state(
     print(
         "From",
         agent_url,
-        "Expected state",
+        "Expected one of states:",
         status_txt,
-        "but received",
+        "but received:",
         state,
         ", with a response status of",
         resp_status,
