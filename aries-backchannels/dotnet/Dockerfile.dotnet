@@ -22,7 +22,7 @@
 # Both are pulling from the repo vs. from the published version.
 
 # Final image needs indy
-FROM streetcred/dotnet-indy:1.15.0 AS base
+FROM streetcred/dotnet-indy:1.15.1 AS base
 WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build
