@@ -30,7 +30,7 @@
     "cross-env": "7.0.3",
     "express": "^4.17.1",
     "minimist": "^1.2.5",
-    "node-fetch": "^2.6.5",
+    "node-fetch": "^3.3.2",
     "rxjs": "^7.4.0"
   },
   "devDependencies": {
