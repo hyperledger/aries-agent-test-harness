@@ -40,6 +40,14 @@ def create_non_revoke_interval(timeframe):
     return {"non_revoked": {"from": from_interval, "to": to_interval}}
 
 
+def set_relative_timestamp(presentation_request_part:dict):
+    if "timestamp" in presentation_request_part:
+        relative_timestamp = presentation_request_part["timestamp"]
+        presentation_request_part["timestamp"] = get_relative_timestamp_to_epoch(
+            relative_timestamp
+        )
+    return presentation_request_part
+
 def get_relative_timestamp_to_epoch(timestamp):
     # timestamps are always relative to now. + or - is represented in seconds from Unix Epoch.
     # Valid timestsamps are

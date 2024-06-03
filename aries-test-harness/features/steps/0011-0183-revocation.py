@@ -32,9 +32,20 @@ def step_impl(context, issuer: str):
 
     issuer_url = context.config.userdata.get(issuer)
 
+    # if schema is in the step data table then use the credential id dict to get the revocation ids based on schema name
+    if context.table:
+        for row in context.table:
+            if row["credential"]:
+                cred_name = row["credential"]
+                cred_rev_id = context.credential_id_dict[cred_name]["cred_rev_id"]
+                rev_reg_id = context.credential_id_dict[cred_name]["rev_reg_id"]
+    else:
+        cred_rev_id = context.cred_rev_id
+        rev_reg_id = context.rev_reg_id
+
     credential_revocation = {
-        "cred_rev_id": context.cred_rev_id,
-        "rev_registry_id": context.rev_reg_id,
+        "cred_rev_id": cred_rev_id,
+        "rev_registry_id": rev_reg_id,
         "publish_immediately": True,
     }
 

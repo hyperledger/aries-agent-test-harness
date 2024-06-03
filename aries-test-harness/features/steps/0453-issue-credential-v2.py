@@ -268,6 +268,13 @@ def step_impl(context, holder, cred_format):
         resp_json = json.loads(resp_text)
         context.cred_rev_id = resp_json["revocation_id"]
         context.rev_reg_id = resp_json["revoc_reg_id"]
+        # some tests will pick up the revocation ids from the schema collection so add them there as well.
+        context.credential_id_dict[context.schema["schema_name"]].append(
+            resp_json["cred_rev_id"]
+        )
+        context.credential_id_dict[context.schema["schema_name"]].append(
+            resp_json["rev_reg_id"]
+        )
 
 
 @then('"{holder}" has the "{cred_format}" credential issued')

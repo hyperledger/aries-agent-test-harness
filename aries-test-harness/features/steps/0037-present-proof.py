@@ -1,8 +1,38 @@
 from behave import *
 import json
 from agent_backchannel_client import agent_backchannel_POST, expected_agent_state
-from agent_test_utils import get_relative_timestamp_to_epoch
+from agent_test_utils import get_relative_timestamp_to_epoch, set_relative_timestamp
 from time import sleep
+
+
+@when('{issuer} issues multiple new credentials to "{prover}" with {credential_data} for schema {schema_name}')
+@given('"{prover}" has multiple issued credentials from {issuer} with {credential_data} for schema {schema_name}')
+def step_impl(context, prover, issuer, credential_data, schema_name):
+    # assign the credential data to the context for use in the credential offer or proposal.
+    if credential_data != None:
+        try:
+            print("Loading credential:", credential_data, "from file:", "features/data/cred_data_" + schema_name.lower() + ".json")
+            credential_data_json_file = open(
+                "features/data/cred_data_" + schema_name.lower() + ".json"
+            )
+            cred_file_data = json.load(credential_data_json_file)
+            if credential_data in cred_file_data:
+                context.credential_data_dict[schema_name] = cred_file_data[credential_data]["attributes"]
+        except FileNotFoundError:
+            print(
+                FileNotFoundError
+                + ": features/data/cred_data_"
+                + schema_name.lower()
+                + ".json"
+            )
+            raise
+
+    # Call the step below to get the credential issued.
+    context.execute_steps(
+        f"""
+        Given "{prover}" has a specific issued credential for {schema_name} from {issuer}
+    """
+    )
 
 
 @when('{issuer} issues a new credential to "{prover}" with {credential_data}')
@@ -15,9 +45,9 @@ def step_impl(context, prover, issuer, credential_data):
                 credential_data_json_file = open(
                     "features/data/cred_data_" + schema_name.lower() + ".json"
                 )
-                context.credential_data_dict[schema_name] = json.load(
-                    credential_data_json_file
-                )[credential_data]["attributes"]
+                cred_file_data = json.load(credential_data_json_file)
+                if credential_data in cred_file_data:
+                    context.credential_data_dict[schema_name] = cred_file_data[credential_data]["attributes"]
             except FileNotFoundError:
                 print(
                     FileNotFoundError
@@ -25,6 +55,7 @@ def step_impl(context, prover, issuer, credential_data):
                     + schema_name.lower()
                     + ".json"
                 )
+                raise
 
     # Call the step below to get the credential issued.
     context.execute_steps(
@@ -32,6 +63,68 @@ def step_impl(context, prover, issuer, credential_data):
         Given "{prover}" has an issued credential from {issuer}
     """
     )
+
+
+@given('"{prover}" has a specific issued credential for {schema_name} from {issuer}')
+def step_impl(context, prover, issuer, schema_name):
+    # create the Connection between the prover and the issuer
+    # TODO: May need to check for an existing connection established from other tests here instead of creating one.
+    # Check if a connection between the players has already been established in this test.
+    if (
+        prover not in context.connection_id_dict
+        or issuer not in context.connection_id_dict[prover]
+    ):
+        context.execute_steps(
+            f"""
+            Given "{issuer}" and "{prover}" have an existing connection
+        """
+        )
+
+    # make sure the issuer has the credential definition
+    context.support_revocation = context.support_revocation_dict[schema_name]
+    context.schema = context.schema_dict[schema_name]
+    context.execute_steps(
+        f"""
+       Given "{issuer}" has a public did
+        When "{issuer}" creates a new schema
+         And "{issuer}" creates a new credential definition
+        Then "{issuer}" has an existing schema
+         And "{issuer}" has an existing credential definition
+    """
+    )
+
+    # setup the holder and issuer for the issue cred scenario below. The data table in the tests does not setup a holder.
+    # The prover is also the holder.
+    context.holder_url = context.config.userdata.get(prover)
+    context.holder_name = prover
+    assert context.holder_url is not None and 0 < len(context.holder_url)
+    # The issuer was not in the data table, it was in the gherkin scenario outline examples, so get it and assign it.
+    context.issuer_url = context.config.userdata.get(issuer)
+    context.issuer_name = issuer
+    assert context.issuer_url is not None and 0 < len(context.issuer_url)
+
+    # issue the credential to prover
+    # If there is a schema_dict then we are working with multiple credential types, loop as many times as
+    # there are schemas and add the schema to context as the issue cred tests expect.
+    if "Indy" in context.tags:
+        context_steps_start = f"""
+            When  "{prover}" proposes a credential to "{issuer}"
+            And """
+    else:
+        context_steps_start = """
+            When """
+    context.credential_data = context.credential_data_dict[schema_name]
+    context.schema = context.schema_dict[schema_name]
+    context_steps = (
+        context_steps_start
+        + f""" "{issuer}" offers a credential
+        And "{prover}" requests the credential
+        And  "{issuer}" issues the credential
+        And "{prover}" acknowledges the credential issue
+        Then "{prover}" has the credential issued
+    """
+    )
+    context.execute_steps(context_steps)
 
 
 @given('"{prover}" has an issued credential from {issuer}')
@@ -240,7 +333,7 @@ def step_impl(context, verifier, request_for_proof, prover):
         context.request_for_proof = request_for_proof_json["presentation_request"]
 
     except FileNotFoundError:
-        print(FileNotFoundError + ": features/data/" + request_for_proof + ".json")
+        print((FileNotFoundError) + ": features/data/" + request_for_proof + ".json")
 
     # Call the step below to get send rhe request for presentation.
     context.execute_steps(
@@ -256,6 +349,15 @@ def step_impl(context, prover):
 
     if context.presentation:
         presentation = context.presentation
+
+        # Determine if there is a top level timestamp for revocation status applicable for all potential credentials in the presentation in the and set accordingly
+        presentation = set_relative_timestamp(presentation)
+        # if "timestamp" in presentation:
+        #     relative_timestamp = presentation["timestamp"]
+        #     presentation["timestamp"] = get_relative_timestamp_to_epoch(
+        #         relative_timestamp
+        #     )
+
         # Find the cred ids and add the actual cred id into the presentation
         # TODO: There is probably a better way to get access to the specific requested attributes and predicates. Revisit this later.
         try:

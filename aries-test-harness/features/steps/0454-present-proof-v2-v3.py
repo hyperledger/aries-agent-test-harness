@@ -5,6 +5,7 @@ from agent_backchannel_client import agent_backchannel_POST, expected_agent_stat
 from agent_test_utils import (
     get_relative_timestamp_to_epoch,
     amend_presentation_definition_with_runtime_data,
+    set_relative_timestamp
 )
 from distutils.util import strtobool
 
@@ -279,6 +280,10 @@ def step_impl(context, prover, presentation):
         presentation = context.presentation
 
         if context.current_cred_format == "indy":
+
+            # Determine if there is a top level timestamp for revocation status applicable for all potential credentials in the presentation in the and set accordingly
+            presentation = set_relative_timestamp(presentation)
+
             # Find the cred ids and add the actual cred id into the presentation
             try:
                 for requested_attribute in presentation[
