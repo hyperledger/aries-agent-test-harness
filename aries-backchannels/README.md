@@ -62,13 +62,13 @@ The following lists the requirements for building AATH compatible docker images:
 - The Dockerfiles must be located in a predefined location in this repo, currently in folders in the `aries-backchannels` folder.
   - The `./manage` script looks for the TA Dockerfiles in those folders.
 - A TA docker image must include all of the processes needed to run the backchannel and the CUT. For example:
-  - the VCX TA includes its backchannel, which embeds the VCX agent framework and the code to operate the VCX "dummy" agency.
+  - the Aries-VCX TA includes its backchannel, which embeds the Aries-VCX agent framework.
   - the ACA-Py framework TA includes its backchannel and an appropriate release of ACA-Py.
 - On startup, each TA has a range of ten public (to the docker network) ports available to it.
   - The lowest port number is passed to the TA on startup and is used by the test harness to send HTTP requests to the running TA.
   - The next nine higher ports are exposed across the docker network and can be used as needed by the TA.
 
-Examples are provided for aca-py [(`Dockerfile.acapy`)](acapy/Dockerfile.acapy), VCX [(`Dockerfile.vcx`)](vcx/Dockerfile.vcx) and .NET [(`Dockerfile.dotnet`)](dotnet/Dockerfile.dotnet).
+Examples are provided for aca-py [(`Dockerfile.acapy`)](acapy/Dockerfile.acapy), aries-vcx [(`Dockerfile.vcx`)](aries-vcx/Dockerfile.aries-vcx) and .NET [(`Dockerfile.dotnet`)](dotnet/Dockerfile.dotnet).
 
 ### `./manage` Script Integration
 
@@ -107,7 +107,7 @@ Important things to note from the script snippet:
 
 - each backchannel is provided a range of public ports (the `-expose` parameter), which are mapped to localhost
   - the backchannel must allocate the ports at runtime based on the `-p` parameter, and not hard code them in the container.
-- the binding of the TA (e.g. `acapy` or `vcx`, etc.) is done earlier in the script by setting the `${ACME_AGENT}` etc. environment variables
+- the binding of the TA (e.g. `acapy` or `aries-vcx`, etc.) is done earlier in the script by setting the `${ACME_AGENT}` etc. environment variables
 - environment variables provide the Docker host IP (`DOCKERHOST`) and a url to the ledger genesis transactions (`LEDGER_URL`)
   - the variables are defaulted if not already set, with the `LEDGER_URL` assumed to be for a locally running instance of `von-network`
 - parameters passed to the backchannel specify the base port number (`-p port`) and to use non-interactive mode (`-i false`)
