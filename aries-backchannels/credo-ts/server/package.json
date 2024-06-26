@@ -1,8 +1,8 @@
 {
-  "name": "aries-framework-javascript-backchannel",
+  "name": "credo-ts-backchannel",
   "version": "1.0.0",
   "license": "Apache-2.0",
-  "description": "Aries Agent Test Harness backchannel for Aries Framework JavaScript",
+  "description": "Aries Agent Test Harness backchannel for Credo-ts",
   "scripts": {
     "build": "yarn tsc",
     "tsc": "tsc --project tsconfig.compile.json",
@@ -11,15 +11,15 @@
     "format": "prettier --ignore-path .gitignore '**/*.+(js|json|ts|md|yml|yaml)' --write"
   },
   "dependencies": {
-    "@aries-framework/anoncreds": "alpha",
     "@aries-framework/anoncreds-rs": "alpha",
-    "@aries-framework/askar": "alpha",
-    "@aries-framework/core": "alpha",
-    "@aries-framework/indy-vdr": "alpha",
-    "@aries-framework/node": "alpha",
-    "@hyperledger/anoncreds-nodejs": "^0.1.0-dev.11",
-    "@hyperledger/aries-askar-nodejs": "^0.1.0-dev.6",
-    "@hyperledger/indy-vdr-nodejs": "^0.1.0-dev.12",
+    "@credo-ts/anoncreds": "^0.5.3",
+    "@credo-ts/askar": "^0.5.3",
+    "@credo-ts/core": "^0.5.3",
+    "@credo-ts/indy-vdr": "^0.5.3",
+    "@credo-ts/node": "^0.5.3",
+    "@hyperledger/anoncreds-nodejs": "^0.2.2",
+    "@hyperledger/aries-askar-nodejs": "^0.2.1",
+    "@hyperledger/indy-vdr-nodejs": "0.2.2",
     "@tsed/common": "6.75.4",
     "@tsed/core": "6.75.4",
     "@tsed/di": "6.75.4",
@@ -38,10 +38,12 @@
     "@types/minimist": "^1.2.0",
     "@types/node": "14.14.28",
     "@types/node-fetch": "^2.6.3",
+    "@types/ref-array-di": "^1.2.8",
+    "@types/ref-struct-di": "^1.1.12",
     "nodemon": "2.0.14",
     "prettier": "^2.4.1",
     "ts-node": "10.3.0",
-    "typescript": "~4.3.0"
+    "typescript": "^5.4.5"
   },
   "resolutions": {
     "ffi-napi": "npm:@2060.io/ffi-napi",

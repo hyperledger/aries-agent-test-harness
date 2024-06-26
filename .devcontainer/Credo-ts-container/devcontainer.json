@@ -2,18 +2,18 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
 	"image": "node:18.18-bookworm",
-	"name": "AFJ Backchannel Dev",
+	"name": "Credo Backchannel Dev",
 	// Use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	//"build": {
 	// 	"context": "../../aries-backchannels",
-	//	"dockerfile": "../../aries-backchannels/javascript/Dockerfile.dev-javascript"
+	//	"dockerfile": "../../aries-backchannels/credo-ts/Dockerfile.dev-credo-ts"
 	//},
 
 	"initializeCommand": "docker network inspect aath_network >/dev/null 2>&1 || docker network create aath_network",
 
-	"workspaceMount": "source=${localWorkspaceFolder}/aries-backchannels/javascript,target=/aries-backchannels/javascript,type=bind",
+	"workspaceMount": "source=${localWorkspaceFolder}/aries-backchannels/credo-ts,target=/aries-backchannels/credo-ts,type=bind",
 
-	"workspaceFolder": "/aries-backchannels/javascript",
+	"workspaceFolder": "/aries-backchannels/credo-ts",
 	
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
@@ -25,7 +25,6 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "uname -a",
-
 	"postCreateCommand": "npm install -g typescript && \
 		yarn install && \
 		cd server && \
