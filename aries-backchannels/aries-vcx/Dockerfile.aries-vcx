@@ -1,4 +1,4 @@
-FROM alpine:3.15.4 AS builder
+FROM alpine:3.20.1 AS builder
 
 ARG UID=1000
 ARG GID=1000
@@ -31,7 +31,7 @@ RUN rm ./target/release/deps/aries_vcx_backchannel*
 COPY --chown=indy:indy  ./aries-vcx/src ./src
 RUN cargo build --release
 
-FROM alpine:3.15.4
+FROM alpine:3.20.1
 
 ARG UID=1000
 ARG GID=1000
