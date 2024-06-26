@@ -34,7 +34,7 @@ jobs:
         with:
           BUILD_AGENTS: "-a aries-vcx -a acapy-main"
           TEST_AGENTS: "-d aries-vcx -b acapy-main"
-          TEST_SCOPE: "-t @RFC0036,@RFC0037,@RFC0160,@revocation -t ~@RFC0025 -t ~@RFC0183 -t ~@RFC0211 -t ~@RFC0434 -t ~@RFC0453 -t ~@wip -t ~@DIDExchangeConnection -t ~@QualifiedDIDs"
+          TEST_SCOPE: "-t @RFC0036,@RFC0037,@RFC0160,@RFC0023,@revocation -t ~@RFC0025 -t ~@RFC0183 -t ~@RFC0211 -t ~@RFC0434 -t ~@RFC0453 -t ~@wip -t ~@DIDExchangeConnection -t ~@QualifiedDIDs"
           REPORT_PROJECT: aries-vcx-b-acapy
       - uses: actions/upload-artifact@v4
         with:
