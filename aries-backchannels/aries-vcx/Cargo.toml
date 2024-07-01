@@ -14,7 +14,7 @@ rand = "0.8.5"
 serde = "1.0.97"
 serde_json = "1.0.40"
 serde_derive = "1.0.97"
-log = "0.4.17"
+log = "0.4.22"
 env_logger = "0.9.1"
 uuid = { version = "0.8.2", features = ["serde", "v4"] }
 aries-vcx-agent = { git = "https://github.com/hyperledger/aries-vcx.git", rev = "451f63cfeb5f6cc3636041a27cedfffea08d8a96" }
