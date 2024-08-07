@@ -4,8 +4,8 @@
 
 | Runset | ACME<br>(Issuer) | Bob<br>(Holder) | Faber<br>(Verifier) | Mallory<br>(Holder) | Scope | Results | 
 | ------ | :--------------: | :-------------: | :----------------: | :-----------------: | ----- | :-----: | 
-| [acapy-afj](#runset-acapy-afj) | acapy-main<br>1.0.0rc5 | javascript<br>0.5.0-alpha.97 | acapy-main<br>1.0.0rc5 | acapy-main<br>1.0.0rc5 | AIP 1.0 | [**38 / 39<br>97%**](https://allure.vonx.io/api/allure-docker-service/projects/acapy-b-javascript/reports/latest/index.html?redirect=false#behaviors) |
-| [afj-acapy](#runset-afj-acapy) | javascript<br>0.5.0-alpha.97 | acapy-main<br>1.0.0rc5 | javascript<br>0.5.0-alpha.97 | javascript<br>0.5.0-alpha.97 | AIP 1.0 | [**11 / 28<br>39%**](https://allure.vonx.io/api/allure-docker-service/projects/javascript-b-acapy/reports/latest/index.html?redirect=false#behaviors) |
+| [acapy-afj](#runset-acapy-afj) | acapy-main<br>1.0.0rc6 | javascript<br>0.5.0-alpha.97 | acapy-main<br>1.0.0rc6 | acapy-main<br>1.0.0rc6 | AIP 1.0 | [**29 / 39<br>74%**](https://allure.vonx.io/api/allure-docker-service/projects/acapy-b-javascript/reports/latest/index.html?redirect=false#behaviors) |
+| [afj-acapy](#runset-afj-acapy) | javascript<br>0.5.0-alpha.97 | acapy-main<br>1.0.0rc6 | javascript<br>0.5.0-alpha.97 | javascript<br>0.5.0-alpha.97 | AIP 1.0 | [**11 / 28<br>39%**](https://allure.vonx.io/api/allure-docker-service/projects/javascript-b-acapy/reports/latest/index.html?redirect=false#behaviors) |
 | [afj](#runset-afj) | javascript<br>0.5.0-alpha.97 | javascript<br>0.5.0-alpha.97 | javascript<br>0.5.0-alpha.97 | javascript<br>0.5.0-alpha.97 | AIP 1.0 | [**12 / 28<br>42%**](https://allure.vonx.io/api/allure-docker-service/projects/javascript/reports/latest/index.html?redirect=false#behaviors) |
 | [javascript-ariesvcx](#runset-javascript-ariesvcx) | javascript<br>0.5.0-alpha.97 | aries-vcx<br>1.0.0 | javascript<br>0.5.0-alpha.97 | javascript<br>0.5.0-alpha.97 | AIP 1.0 | [**3 / 18<br>16%**](https://allure.vonx.io/api/allure-docker-service/projects/javascript-b-aries-vcx/reports/latest/index.html?redirect=false#behaviors) |
 
@@ -16,10 +16,10 @@
 Runset Name: ACA-PY to AFJ
 
 ```tip
-**Latest results: 38 out of 39 (97%)**
+**Latest results: 29 out of 39 (74%)**
 
 
-*Last run: Mon Jul 29 00:45:31 UTC 2024*
+*Last run: Wed Aug  7 00:40:39 UTC 2024*
 ```
 
 #### Current Runset Status
@@ -42,7 +42,7 @@ Runset Name: AFJ to ACA-PY
 **Latest results: 11 out of 28 (39%)**
 
 
-*Last run: Mon Jul 29 02:57:22 UTC 2024*
+*Last run: Wed Aug  7 02:42:43 UTC 2024*
 ```
 
 #### Current Runset Status
@@ -65,7 +65,7 @@ Runset Name: AFJ to AFJ
 **Latest results: 12 out of 28 (42%)**
 
 
-*Last run: Mon Jul 29 03:13:27 UTC 2024*
+*Last run: Wed Aug  7 02:58:13 UTC 2024*
 ```
 
 #### Current Runset Status
