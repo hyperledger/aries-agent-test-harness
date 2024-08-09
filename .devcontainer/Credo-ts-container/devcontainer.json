@@ -2,31 +2,45 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
 	"image": "node:18.18-bookworm",
-	"name": "AFJ Backchannel Dev",
+	"name": "Credo Backchannel Dev",
 	// Use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	//"build": {
 	// 	"context": "../../aries-backchannels",
-	//	"dockerfile": "../../aries-backchannels/javascript/Dockerfile.dev-javascript"
+	//	"dockerfile": "../../aries-backchannels/credo-ts/Dockerfile.dev-credo-ts"
 	//},
 
 	"initializeCommand": "docker network inspect aath_network >/dev/null 2>&1 || docker network create aath_network",
 
-	"workspaceMount": "source=${localWorkspaceFolder}/aries-backchannels/javascript,target=/aries-backchannels/javascript,type=bind",
+	"workspaceMount": "source=${localWorkspaceFolder}/aries-backchannels/credo-ts,target=/aries-backchannels/credo-ts,type=bind",
 
-	"workspaceFolder": "/aries-backchannels/javascript",
+	"workspaceFolder": "/aries-backchannels/credo-ts",
 	
+	"mounts": [
+		{ "source": "${localWorkspaceFolder}/aries-backchannels/data", "target": "/aries-backchannels/data", "type": "bind" }
+	],
+
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {
 		"docker-from-docker": "latest"
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [9020],
+	"forwardPorts": [9020, 8080],
+
+	"runArgs": [
+		"--network=aath_network",
+		"--name=acme_agent_dev"
+	],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "uname -a",
-
-	"postCreateCommand": "npm install -g typescript && \
+	"postCreateCommand": "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash && \
+        export NVM_DIR=\"$HOME/.nvm\" && \
+        [ -s \"$NVM_DIR/nvm.sh\" ] && \\. \"$NVM_DIR/nvm.sh\" && \
+        [ -s \"$NVM_DIR/bash_completion\" ] && \\. \"$NVM_DIR/bash_completion\" && \
+        nvm install 20 && \
+        nvm use 20 && \
+        npm install -g typescript && \
 		yarn install && \
 		cd server && \
 		npm install && \
@@ -37,11 +51,6 @@
 		apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3B4FE6ACC0B21F32 && \
 		add-apt-repository -y \"deb http://security.ubuntu.com/ubuntu bionic-security main\" && \
 		apt-get install -y --allow-unauthenticated libindy",
-
-	"runArgs": [
-		"--network=aath_network",
-		"--name=acme_agent"
-	],
 
 	// Configure tool-specific properties.
 	"customizations": {

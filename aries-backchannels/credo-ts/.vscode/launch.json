@@ -1,0 +1,34 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "tsc Launch & Debug Credo Agent",
+            "program": "${workspaceFolder}/src/index.ts",
+            "preLaunchTask": "tsc: build - tsconfig.json",
+            "outFiles": ["${workspaceFolder}/out/**/*.js"]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "yarn Launch & Debug Credo Agent",
+            "runtimeExecutable": "yarn",
+            "env": {
+                "LEDGER_URL": "http://test.bcovrin.vonx.io",
+                "TAILS_SERVER_URL": "http://tails.bcovrin.vonx.io",
+                "DOCKERHOST": "acme_agent_dev"
+            },
+            "args": [
+                "ts-node",
+                "src/index.ts",
+                "9020"
+            ],
+            "cwd": "${workspaceFolder}/server",
+            "console": "integratedTerminal"
+        }
+    ]
+}

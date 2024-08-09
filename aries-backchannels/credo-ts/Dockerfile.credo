@@ -1,0 +1,63 @@
+FROM ubuntu:22.04 AS base
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -y && apt-get install -y \
+    software-properties-common \
+    apt-transport-https \
+    curl \
+    # Only needed to build indy-sdk
+    build-essential 
+
+# libindy
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88
+RUN add-apt-repository "deb https://repo.sovrin.org/sdk/deb bionic stable"
+
+# nodejs
+#RUN curl -sL https://deb.nodesource.com/setup_20.x | bash
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash
+RUN apt-get install -y nodejs
+
+# yarn
+# RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
+#     echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+RUN npm install -g yarn
+
+# install depdencies
+# RUN apt-get update -y && apt-get install -y --allow-unauthenticated \
+#     nodejs
+    #libindy \
+    
+
+# Install yarn seperately due to `no-install-recommends` to skip nodejs install 
+#RUN apt-get install -y --no-install-recommends yarn
+
+RUN apt-get upgrade -y libstdc++6
+
+#FROM base AS final
+
+WORKDIR /src
+ENV RUN_MODE="docker"
+
+#COPY credo-ts/server/package.json package.json
+COPY credo-ts/server .
+COPY credo-ts/ngrok-wait.sh ./ngrok-wait.sh
+
+# Run install after copying only depdendency file
+# to make use of docker layer caching
+RUN yarn install
+
+# Ensure the application binds to 0.0.0.0
+ENV HOST=0.0.0.0
+ENV PORT=9030
+
+# Expose the necessary port
+EXPOSE 9030-9033
+
+# # Copy other depedencies
+# COPY credo-ts/server .
+# COPY credo-ts/ngrok-wait.sh ./ngrok-wait.sh
+
+# For now we use ts-node. Compiling with typescript
+# doesn't work because indy-sdk types are not exported
+ENTRYPOINT [ "bash", "ngrok-wait.sh"]

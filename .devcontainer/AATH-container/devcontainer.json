@@ -9,6 +9,8 @@
         "dockerfile": "../../aries-test-harness/Dockerfile.dev-harness"
     },
 
+	"initializeCommand": "docker network inspect aath_network >/dev/null 2>&1 || docker network create aath_network",
+
 	"workspaceMount": "source=${localWorkspaceFolder}/aries-test-harness,target=/aries-test-harness,type=bind",
 
 	"workspaceFolder": "/aries-test-harness",

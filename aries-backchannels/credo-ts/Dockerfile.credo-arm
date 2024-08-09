@@ -1,0 +1,41 @@
+FROM snel/von-image:node-1.12-4-arm64
+
+ENV DEBIAN_FRONTEND noninteractive
+
+USER root
+
+RUN apt-get update -y && apt-get install -y \
+    software-properties-common \
+    apt-transport-https \
+    curl \
+    # Only needed to build indy-sdk
+    build-essential 
+
+# nodejs
+RUN curl -sL https://deb.nodesource.com/setup_12.x | bash
+
+# yarn
+RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
+    echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+
+# install depdencies
+RUN apt-get update -y && apt-get install -y --allow-unauthenticated \
+    nodejs
+
+# Install yarn seperately due to `no-install-recommends` to skip nodejs install 
+RUN apt-get install -y --no-install-recommends yarn
+
+WORKDIR /src
+ENV RUN_MODE="docker"
+
+COPY javascript/server/package.json package.json
+
+# Run install after copying only depdendency file
+# to make use of docker layer caching
+RUN yarn install
+
+# Copy other depedencies
+COPY javascript/server .
+COPY javascript/ngrok-wait.sh ./ngrok-wait.sh
+
+ENTRYPOINT [ "bash", "ngrok-wait.sh"]

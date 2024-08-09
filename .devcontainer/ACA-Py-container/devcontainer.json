@@ -10,6 +10,8 @@
         "dockerfile": "../../aries-backchannels/acapy/Dockerfile.dev-acapy-main"
     },
 
+	"initializeCommand": "docker network inspect aath_network >/dev/null 2>&1 || docker network create aath_network",
+
 	"workspaceMount": "source=${localWorkspaceFolder}/aries-backchannels/acapy,target=/aries-backchannels/acapy,type=bind",
 
 	"mounts": [
